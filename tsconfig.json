@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "module": "ESNext",
+        "esModuleInterop": true,
+        "moduleResolution": "node",
+        "pretty": true,
+        "target": "ESNext",
+        "outDir": "dist",
+        "baseUrl": ".",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "paths": {
+            "@database/*": ["src/database/*"],
+            "@utils/*": ["src/utils/*"],
+            "@config/*": ["src/config/*"]
+        }
+    },
+    "include": ["src/**/*.ts"],
+    "exclude": ["node_modules"]
+}
