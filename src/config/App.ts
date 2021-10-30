@@ -1,6 +1,7 @@
 import { DB_PORT } from '@utils/constants.js';
 import {
     APIKey,
+    ApplicationUser,
     Chunk,
     DataProcessor,
     DataSupplier,
@@ -33,6 +34,7 @@ export default class App {
             database: 'breadwinner',
             entities: [
                 APIKey,
+                ApplicationUser,
                 Chunk,
                 DataProcessor,
                 DataSupplier,

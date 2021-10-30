@@ -1,7 +1,16 @@
-import { Column, CreateDateColumn, Entity, UpdateDateColumn } from 'typeorm';
+import {
+    Column,
+    CreateDateColumn,
+    Entity,
+    PrimaryGeneratedColumn,
+    UpdateDateColumn,
+} from 'typeorm';
 
 @Entity()
 export class APIKey {
+    @PrimaryGeneratedColumn()
+    id: number;
+
     @Column()
     key: string;
 

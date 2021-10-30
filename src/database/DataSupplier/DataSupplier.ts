@@ -1,8 +1,11 @@
 import { ApplicationUser, APIKey, JSONSchema } from '@database/models/index.js';
-import { Entity, OneToMany, OneToOne } from 'typeorm';
+import { Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class DataSupplier {
+    @PrimaryGeneratedColumn()
+    id: number;
+
     @OneToOne(() => ApplicationUser, { primary: true, cascade: true })
     userDetails: ApplicationUser;
 
