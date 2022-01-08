@@ -1,4 +1,4 @@
-import { FileResource, Payload } from '@database/models/index.js';
+import { FileResource, Payload } from '@/database/models/index.js';
 import { Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
