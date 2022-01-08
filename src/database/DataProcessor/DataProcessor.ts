@@ -1,4 +1,4 @@
-import { ApplicationUser, APIKey } from '@database/models/index.js';
+import { ApplicationUser, APIKey } from '@/database/models/index.js';
 import { Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()

@@ -1,4 +1,4 @@
-import { DB_PORT } from '@utils/constants.js';
+import { DB_PORT, FRONTEND_URL } from '@/utils/constants.js';
 import {
     APIKey,
     ApplicationUser,
@@ -9,23 +9,32 @@ import {
     JSONSchema,
     Payload,
     Role,
-} from '@database/models/index.js';
+} from '@/database/models/index.js';
 import express from 'express';
-import { Connection, createConnection } from 'typeorm';
+import cors from 'cors';
+import { Connection, createConnection, getCustomRepository } from 'typeorm';
+import { APIKeyRepository } from '@/database/APIKey/APIKeyRepository.js';
 
-export default class App {
+class App {
     public static app: App;
     public expressApp: express.Application;
     public db: Connection;
+    public apiKeyRepository: APIKeyRepository;
+
     private constructor() {}
 
     private static configureExpressApp(): void {
         this.app.expressApp.use(express.urlencoded({ extended: true }));
         this.app.expressApp.use(express.json()); // To parse the incoming requests with JSON payloads
+        this.app.expressApp.use(
+            cors({
+                origin: FRONTEND_URL,
+            })
+        );
     }
 
     private static async configureDB(): Promise<Connection> {
-        return await createConnection({
+        await createConnection({
             type: 'postgres',
             host: 'localhost',
             port: DB_PORT,
@@ -46,6 +55,9 @@ export default class App {
             synchronize: true,
             logging: false,
         });
+
+        this.app.apiKeyRepository = getCustomRepository(APIKeyRepository);
+        return;
     }
 
     public static async getAppInstance(): Promise<App> {
@@ -59,3 +71,5 @@ export default class App {
         return this.app;
     }
 }
+
+export default await App.getAppInstance();

@@ -1,4 +1,4 @@
-import { Role } from '@database/models/index.js';
+import { Role } from '@/database/models/index.js';
 import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable } from 'typeorm';
 
 @Entity()

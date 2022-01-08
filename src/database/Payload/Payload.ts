@@ -1,4 +1,4 @@
-import { Chunk, JSONSchema } from '@database/models/index.js';
+import { Chunk, JSONSchema } from '@/database/models/index.js';
 import { Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
