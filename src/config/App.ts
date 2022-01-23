@@ -1,7 +1,7 @@
 import { DB_PORT, FRONTEND_URL } from '@/utils/constants.js';
 import {
     APIKey,
-    ApplicationUser,
+    User,
     Chunk,
     DataProcessor,
     DataSupplier,
@@ -14,14 +14,24 @@ import express from 'express';
 import cors from 'cors';
 import { Connection, createConnection, getCustomRepository } from 'typeorm';
 import { APIKeyRepository } from '@/database/APIKey/APIKeyRepository.js';
+import { UserRepository } from '@/database/User/UserRepository';
+import { DataProcessorRepository } from '@/database/DataProcessor/DataProcessorRepository';
+import { DataSupplierRepository } from '@/database/DataSupplier/DataSupplierRepository';
+import { ConfirmationRepository } from '@/database/Confirmation/ConfirmationRepository';
 
 class App {
     public static app: App;
     public expressApp: express.Application;
     public db: Connection;
     public apiKeyRepository: APIKeyRepository;
+    public userRepository: UserRepository;
+    public confirmationRepository: ConfirmationRepository;
+    public dataProcessorRepository: DataProcessorRepository;
+    public dataSupplierRepository: DataSupplierRepository;
 
-    private constructor() {}
+    private constructor() {
+        //
+    }
 
     private static configureExpressApp(): void {
         this.app.expressApp.use(express.urlencoded({ extended: true }));
@@ -43,7 +53,7 @@ class App {
             database: 'breadwinner',
             entities: [
                 APIKey,
-                ApplicationUser,
+                User,
                 Chunk,
                 DataProcessor,
                 DataSupplier,
@@ -57,6 +67,10 @@ class App {
         });
 
         this.app.apiKeyRepository = getCustomRepository(APIKeyRepository);
+        this.app.userRepository = getCustomRepository(UserRepository);
+        this.app.confirmationRepository = getCustomRepository(ConfirmationRepository);
+        this.app.dataProcessorRepository = getCustomRepository(DataProcessorRepository);
+        this.app.dataSupplierRepository = getCustomRepository(DataSupplierRepository);
         return;
     }
 

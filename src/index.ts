@@ -3,13 +3,13 @@ import { SERVER_PORT } from '@/utils/constants.js';
 import https from 'https';
 import { readFileSync } from 'fs';
 import { NotFoundError, useExpressServer } from 'routing-controllers';
-import { ApplicationUserController } from '@/database/ApplicationUser/ApplicationUserController.js';
+import { UserController } from '@/database/User/UserController.js';
 import { APIKeyController } from '@/database/APIKey/APIKeyController.js';
 import { WebSocketServer } from 'ws';
 import { checkAPIKeyValid } from '@/database/APIKey/APIKeyService.js';
 
 useExpressServer(app.expressApp, {
-    controllers: [ApplicationUserController, APIKeyController],
+    controllers: [UserController, APIKeyController],
 });
 
 const httpsServer = https.createServer(

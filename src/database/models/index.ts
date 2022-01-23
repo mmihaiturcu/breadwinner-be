@@ -1,4 +1,4 @@
-export { ApplicationUser } from '@/database/ApplicationUser/ApplicationUser.js';
+export { User } from '@/database/User/User.js';
 export { APIKey } from '@/database/APIKey/APIKey.js';
 export { DataProcessor } from '@/database/DataProcessor/DataProcessor.js';
 export { DataSupplier } from '@/database/DataSupplier/DataSupplier.js';
