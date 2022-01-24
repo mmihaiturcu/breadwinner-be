@@ -13,6 +13,9 @@ export class User {
     password: string;
 
     @Column()
+    salt: string;
+
+    @Column()
     role: Role;
 
     constructor(email: User['email']) {

@@ -1,9 +1,13 @@
 import { getUUIDV4, hashAndSaltPasswordToHex } from '@/utils/helper.js';
 
 import { addWeeks } from 'date-fns';
-
+import { randomBytes } from 'crypto';
 import app from '@/config/App.js';
-import { UserCreateRequest } from '@/types/payloads/requests/index.js';
+import {
+    UserCreateRequest,
+    UserFinishRequest,
+    UserLoginRequest,
+} from '@/types/payloads/requests/index.js';
 import { User } from './User.js';
 import { Role } from '@/types/enums/Role.js';
 import { DataSupplier } from '../DataSupplier/DataSupplier.js';
@@ -15,8 +19,8 @@ import {
     sendMail,
 } from '@/utils/emailService.js';
 import { FRONTEND_URL, USER_ROLE_TO_STRING } from '@/utils/constants.js';
-import { UserFinishRequest } from '@/types/payloads/requests/ApplicationUserFinishRequest.js';
-import { NotFoundError } from 'routing-controllers';
+import { NotFoundError, UnauthorizedError } from 'routing-controllers';
+import { UserLoginResponse } from '@/types/payloads/responses/UserLoginResponse.js';
 
 const userRepository = app.userRepository;
 const confirmationRepository = app.confirmationRepository;
@@ -76,13 +80,38 @@ export async function finishUserAccount(payload: UserFinishRequest): Promise<voi
     const user = confirmationWithUser.user;
 
     if (user) {
+        const salt = randomBytes(16);
         await userRepository.update(user.id, {
-            password: hashAndSaltPasswordToHex(payload.password),
+            password: hashAndSaltPasswordToHex(payload.password, salt),
+            salt: salt.toString('hex'),
         });
         await confirmationRepository.update(confirmationWithUser.id, {
             wasUsed: true,
         });
     } else {
         throw new NotFoundError('No user matching the specified confirmation was found.');
+    }
+}
+
+export async function loginUser(payload: UserLoginRequest): Promise<UserLoginResponse> {
+    const user = await userRepository.findOne({
+        email: payload.email,
+    });
+
+    if (user) {
+        if (
+            user.password ===
+            hashAndSaltPasswordToHex(payload.password, Buffer.from(user.salt, 'hex'))
+        ) {
+            return {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+            };
+        } else {
+            throw new UnauthorizedError('No user matching the supplied credentials was found.');
+        }
+    } else {
+        throw new UnauthorizedError('No user matching the supplied credentials was found.');
     }
 }

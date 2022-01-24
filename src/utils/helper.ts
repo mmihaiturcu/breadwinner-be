@@ -17,6 +17,6 @@ export function getUUIDV4(): string {
  * @param password - string password
  * @returns scrypt output in hex format
  */
-export function hashAndSaltPasswordToHex(password: string): string {
-    return scryptSync(password, randomBytes(16), 64).toString('hex');
+export function hashAndSaltPasswordToHex(password: string, salt: Buffer): string {
+    return scryptSync(password, salt, 64).toString('hex');
 }
