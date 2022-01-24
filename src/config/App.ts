@@ -9,15 +9,16 @@ import {
     JSONSchema,
     Payload,
     Role,
+    Confirmation,
 } from '@/database/models/index.js';
 import express from 'express';
 import cors from 'cors';
 import { Connection, createConnection, getCustomRepository } from 'typeorm';
 import { APIKeyRepository } from '@/database/APIKey/APIKeyRepository.js';
-import { UserRepository } from '@/database/User/UserRepository';
-import { DataProcessorRepository } from '@/database/DataProcessor/DataProcessorRepository';
-import { DataSupplierRepository } from '@/database/DataSupplier/DataSupplierRepository';
-import { ConfirmationRepository } from '@/database/Confirmation/ConfirmationRepository';
+import { UserRepository } from '@/database/User/UserRepository.js';
+import { DataProcessorRepository } from '@/database/DataProcessor/DataProcessorRepository.js';
+import { DataSupplierRepository } from '@/database/DataSupplier/DataSupplierRepository.js';
+import { ConfirmationRepository } from '@/database/Confirmation/ConfirmationRepository.js';
 
 class App {
     public static app: App;
@@ -61,6 +62,7 @@ class App {
                 JSONSchema,
                 Payload,
                 Role,
+                Confirmation,
             ],
             synchronize: true,
             logging: false,

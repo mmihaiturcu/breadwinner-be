@@ -1,5 +1,5 @@
 import { EntityRepository, Repository } from 'typeorm';
-import { Confirmation } from './Confirmation';
+import { Confirmation } from './Confirmation.js';
 
 @EntityRepository(Confirmation)
 export class ConfirmationRepository extends Repository<Confirmation> {

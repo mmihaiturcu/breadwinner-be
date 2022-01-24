@@ -1,3 +1,4 @@
-export { UserCreateRequest } from './UserCreateRequest';
-export { UserFinishRequest } from './UserFinishRequest';
-export { UserLoginRequest } from './UserLoginRequest';
+export { UserCreateRequest } from './UserCreateRequest.js';
+export { UserFinishRequest } from './UserFinishRequest.js';
+export { UserLoginRequest } from './UserLoginRequest.js';
+export { CheckConfirmationLinkValidRequest } from './CheckConfirmationLinkValidRequest.js';

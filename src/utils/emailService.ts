@@ -1,12 +1,13 @@
-import { EmailAction } from '@/types/models';
+import { EmailAction } from '@/types/models/index.js';
 import nodeMailer, { SendMailOptions } from 'nodemailer';
+import path from 'path';
 import {
     EMAIL_HOST,
     EMAIL_HOST_PORT,
     EMAIL_PASSWORD,
     EMAIL_USERNAME,
     FRONTEND_URL,
-} from './constants';
+} from './constants.js';
 
 const transporter = nodeMailer.createTransport({
     host: EMAIL_HOST,
@@ -63,7 +64,7 @@ export function getGeneralEmailTemplate(title: string, content: string) {
                             </tr>
                             <tr>
                                 <td style="text-align: center">
-                                    <p style="font-size: 14px; color: rgba(69, 80, 86, 0.7411764705882353); line-height: 18px; margin: 0 0 0">&copy; <strong>Breadwinner</strong></p> 
+                                    <p style="font-size: 14px; color: rgba(69, 80, 86, 0.7411764705882353); line-height: 18px; margin: 0 0 0">&copy; <strong>www.breadwinner.ai</strong></p> 
                                 </td>
                             </tr>
                             <tr>
@@ -96,10 +97,10 @@ export async function sendMail(mailOptions: Omit<SendMailOptions, 'from'>) {
         ...mailOptions,
         from: EMAIL_USERNAME,
         attachments: [
-            ...mailOptions.attachments,
+            ...(mailOptions.attachments ?? []),
             {
                 filename: 'logo',
-                path: '/src/assets/logo-transparent-450w.png',
+                path: path.resolve('.', 'src', 'assets', 'logo-transparent-450w.png'),
                 cid: 'logo@breadwinner',
             },
         ],

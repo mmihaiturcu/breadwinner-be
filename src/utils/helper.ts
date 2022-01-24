@@ -1,6 +1,6 @@
 import forge from 'node-forge';
 import { v4 as uuidv4 } from 'uuid';
-import { scryptSync, randomBytes } from 'crypto';
+import { scryptSync } from 'crypto';
 
 export function generateSHA512(data: string) {
     const sha512 = forge.md.sha512.create();

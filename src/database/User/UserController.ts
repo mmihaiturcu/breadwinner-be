@@ -1,8 +1,11 @@
 import { loggingMiddleware } from '@/config/loggingMiddleware.js';
-import { UserCreateRequest, UserFinishRequest } from '@/types/payloads/requests';
-import { UserLoginRequest } from '@/types/payloads/requests/UserLoginRequest';
+import {
+    UserCreateRequest,
+    UserFinishRequest,
+    UserLoginRequest,
+} from '@/types/payloads/requests/index.js';
 import { Body, Controller, Post, UseAfter } from 'routing-controllers';
-import { createUser, finishUserAccount, loginUser } from './UserService';
+import { createUser, finishUserAccount, loginUser } from './UserService.js';
 
 @Controller('/user')
 export class UserController {
@@ -23,6 +26,7 @@ export class UserController {
     @Post('/login')
     @UseAfter(loggingMiddleware)
     async login(@Body() payload: UserLoginRequest) {
+        console.log('login');
         const userDetails = await loginUser(payload);
         return userDetails;
     }

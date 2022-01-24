@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
-import { User } from '../models';
+import { User } from '../models/index.js';
 
 @Entity()
 export class Confirmation {

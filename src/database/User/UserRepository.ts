@@ -1,6 +1,6 @@
 import { EntityRepository, Repository } from 'typeorm';
-import { Confirmation } from '../Confirmation/Confirmation';
-import { User } from './User';
+import { Confirmation } from '../Confirmation/Confirmation.js';
+import { User } from './User.js';
 
 @EntityRepository(User)
 export class UserRepository extends Repository<User> {
@@ -16,5 +16,12 @@ export class UserRepository extends Repository<User> {
                 },
             },
         });
+    }
+    async existsByEmail(email: User['email']): Promise<boolean> {
+        return (
+            (await this.createQueryBuilder('entity')
+                .where('entity.email= :value', { value: email })
+                .getCount()) > 0
+        );
     }
 }

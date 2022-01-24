@@ -1,4 +1,4 @@
-import { Role } from '@/types/enums';
+import { Role } from '@/types/enums/index.js';
 
 export const SERVER_PORT = 8420;
 export const DB_PORT = 5432;

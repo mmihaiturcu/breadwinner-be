@@ -1,11 +1,11 @@
 import { HttpError } from 'routing-controllers';
 
-export class HTTPGoneError extends HttpError {
+export class HTTPConflictError extends HttpError {
     public message: string;
 
     constructor(message: string) {
-        super(410);
-        Object.setPrototypeOf(this, HTTPGoneError.prototype);
+        super(409);
+        Object.setPrototypeOf(this, HTTPConflictError.prototype);
         this.message = message;
     }
 

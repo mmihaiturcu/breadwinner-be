@@ -1,4 +1,4 @@
-import { Role } from '@/types/enums';
+import { Role } from '@/types/enums/index.js';
 import { IsEmail, IsIn } from 'class-validator';
 
 export class UserCreateRequest {

@@ -21,6 +21,8 @@ import {
 import { FRONTEND_URL, USER_ROLE_TO_STRING } from '@/utils/constants.js';
 import { NotFoundError, UnauthorizedError } from 'routing-controllers';
 import { UserLoginResponse } from '@/types/payloads/responses/UserLoginResponse.js';
+import { QueryFailedError } from 'typeorm';
+import { HTTPConflictError } from '@/errors/HTTPConflictError.js';
 
 const userRepository = app.userRepository;
 const confirmationRepository = app.confirmationRepository;
@@ -29,22 +31,30 @@ const dataProcessorRepository = app.dataProcessorRepository;
 
 export async function createUser(payload: UserCreateRequest): Promise<void> {
     // 1. Create the User
-    const user = new User(payload.email);
+    const user = new User(payload.email, payload.userRole);
 
     // 2. Create either a DataSupplier or DataProcessor
-    switch (payload.userRole) {
-        case Role.DATA_SUPPLIER: {
-            await dataSupplierRepository.save(new DataSupplier(user));
-            break;
+    try {
+        switch (payload.userRole) {
+            case Role.DATA_SUPPLIER: {
+                await dataSupplierRepository.save(new DataSupplier(user));
+                break;
+            }
+            case Role.DATA_PROCESSOR: {
+                await dataProcessorRepository.save(new DataProcessor(user));
+                break;
+            }
         }
-        case Role.DATA_PROCESSOR: {
-            await dataProcessorRepository.save(new DataProcessor(user));
-            break;
+    } catch (error) {
+        // 2.1 Handle the case in which another user with the same email exists.
+        if (error instanceof QueryFailedError) {
+            throw new HTTPConflictError('A user with the specified email address already exists.');
         }
     }
 
     // 3. Create Confirmation for the user
     const confirmation = new Confirmation(getUUIDV4(), addWeeks(new Date(), 1), user);
+    await confirmationRepository.save(confirmation);
 
     // 4. Send email to user
     await sendMail({
@@ -57,11 +67,12 @@ export async function createUser(payload: UserCreateRequest): Promise<void> {
                     `Thank you for signing up for a Breadwinner ${
                         USER_ROLE_TO_STRING[user.role]
                     } account!`,
+                    'Please click on the button below in order to set a password.',
                 ],
                 [
                     {
-                        text: 'Finish',
-                        url: `${FRONTEND_URL}/confirmation/${confirmation.uuid}`,
+                        text: 'Set password',
+                        url: `${FRONTEND_URL}/#/confirmation?uuid=${confirmation.uuid}`,
                     },
                 ]
             )
@@ -100,8 +111,9 @@ export async function loginUser(payload: UserLoginRequest): Promise<UserLoginRes
 
     if (user) {
         if (
+            user.password &&
             user.password ===
-            hashAndSaltPasswordToHex(payload.password, Buffer.from(user.salt, 'hex'))
+                hashAndSaltPasswordToHex(payload.password, Buffer.from(user.salt, 'hex'))
         ) {
             return {
                 id: user.id,

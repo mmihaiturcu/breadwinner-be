@@ -7,9 +7,10 @@ import { UserController } from '@/database/User/UserController.js';
 import { APIKeyController } from '@/database/APIKey/APIKeyController.js';
 import { WebSocketServer } from 'ws';
 import { checkAPIKeyValid } from '@/database/APIKey/APIKeyService.js';
+import { ConfirmationController } from './database/Confirmation/ConfirmationController.js';
 
 useExpressServer(app.expressApp, {
-    controllers: [UserController, APIKeyController],
+    controllers: [APIKeyController, UserController, ConfirmationController],
 });
 
 const httpsServer = https.createServer(
