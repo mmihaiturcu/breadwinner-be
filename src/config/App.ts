@@ -8,7 +8,6 @@ import {
     FileResource,
     JSONSchema,
     Payload,
-    Role,
     Confirmation,
 } from '@/database/models/index.js';
 import express from 'express';
@@ -61,7 +60,6 @@ class App {
                 FileResource,
                 JSONSchema,
                 Payload,
-                Role,
                 Confirmation,
             ],
             synchronize: true,

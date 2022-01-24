@@ -1,5 +1,5 @@
 import { User, APIKey } from '@/database/models/index.js';
-import { BeforeInsert, Entity, JoinColumn, OneToOne, PrimaryColumn } from 'typeorm';
+import { BeforeInsert, Column, Entity, JoinColumn, OneToOne, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class DataProcessor {
