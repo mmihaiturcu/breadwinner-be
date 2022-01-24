@@ -1,17 +1,27 @@
-import { ApplicationUser, APIKey, JSONSchema } from '@/database/models/index.js';
-import { Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { User, APIKey, JSONSchema } from '@/database/models/index.js';
+import { BeforeInsert, Entity, JoinColumn, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class DataSupplier {
-    @PrimaryGeneratedColumn()
+    @PrimaryColumn()
     id: number;
 
-    @OneToOne(() => ApplicationUser, { primary: true, cascade: true })
-    userDetails: ApplicationUser;
+    @OneToOne(() => User, { cascade: true })
+    @JoinColumn({ name: 'id' })
+    userDetails: User;
 
-    @OneToOne(() => APIKey, { primary: true, cascade: true })
+    @OneToOne(() => APIKey, { cascade: true })
     apiKey: APIKey;
 
     @OneToMany(() => JSONSchema, (jsonSchema) => jsonSchema.dataSupplier)
     jsonSchemas: JSONSchema[];
+
+    constructor(User: User) {
+        this.userDetails = User;
+    }
+
+    @BeforeInsert()
+    mapsId() {
+        this.id = this.userDetails.id;
+    }
 }

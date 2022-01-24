@@ -1,14 +1,24 @@
-import { ApplicationUser, APIKey } from '@/database/models/index.js';
-import { Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { User, APIKey } from '@/database/models/index.js';
+import { BeforeInsert, Entity, JoinColumn, OneToOne, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class DataProcessor {
-    @PrimaryGeneratedColumn()
+    @PrimaryColumn()
     id: number;
 
-    @OneToOne(() => ApplicationUser, { primary: true, cascade: true })
-    userDetails: ApplicationUser;
+    @OneToOne(() => User, { cascade: true })
+    @JoinColumn({ name: 'id' })
+    userDetails: User;
 
-    @OneToOne(() => APIKey, { primary: true, cascade: true })
+    @OneToOne(() => APIKey, { cascade: true })
     apiKey: APIKey;
+
+    constructor(userDetails: User) {
+        this.userDetails = userDetails;
+    }
+
+    @BeforeInsert()
+    mapsId() {
+        this.id = this.userDetails.id;
+    }
 }
