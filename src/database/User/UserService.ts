@@ -29,7 +29,7 @@ const dataProcessorRepository = app.dataProcessorRepository;
 
 export async function createUser(payload: UserCreateRequest): Promise<void> {
     // 1. Create the User
-    const user = await userRepository.save(new User(payload.email));
+    const user = new User(payload.email);
 
     // 2. Create either a DataSupplier or DataProcessor
     switch (payload.userRole) {
