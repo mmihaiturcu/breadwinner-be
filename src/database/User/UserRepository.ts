@@ -4,6 +4,9 @@ import { User } from './User.js';
 
 @EntityRepository(User)
 export class UserRepository extends Repository<User> {
+    findById(id: User['id']) {
+        return this.findOne({ id });
+    }
     findByEmail(email: User['email']) {
         return this.findOne({ email });
     }

@@ -4,9 +4,10 @@ import {
     UserFinishRequest,
     UserLoginRequest,
 } from '@/types/payloads/requests/index.js';
-import { Body, Controller, Post, UseAfter } from 'routing-controllers';
+import { Body, Controller, Get, Param, Post, UseAfter } from 'routing-controllers';
 import { createUser, finishUserAccount, loginUser } from './UserService.js';
-
+import { getApiKeysForUser } from '../APIKey/APIKeyService.js';
+import { User } from './User.js';
 @Controller('/user')
 export class UserController {
     @Post('/create')
@@ -26,8 +27,13 @@ export class UserController {
     @Post('/login')
     @UseAfter(loggingMiddleware)
     async login(@Body() payload: UserLoginRequest) {
-        console.log('login');
         const userDetails = await loginUser(payload);
         return userDetails;
+    }
+
+    @Get('/:id/apiKeys')
+    async getApiKeysForUser(@Param('id') id: User['id']) {
+        const apiKeys = await getApiKeysForUser(id);
+        return apiKeys;
     }
 }

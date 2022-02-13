@@ -1,13 +1,5 @@
-import { User, APIKey, JSONSchema } from '@/database/models/index.js';
-import {
-    BeforeInsert,
-    Column,
-    Entity,
-    JoinColumn,
-    OneToMany,
-    OneToOne,
-    PrimaryColumn,
-} from 'typeorm';
+import { User, JSONSchema } from '@/database/models/index.js';
+import { BeforeInsert, Entity, JoinColumn, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class DataSupplier {
@@ -17,9 +9,6 @@ export class DataSupplier {
     @OneToOne(() => User, { cascade: true })
     @JoinColumn({ name: 'id' })
     userDetails: User;
-
-    @OneToOne(() => APIKey, { cascade: true })
-    apiKey: APIKey;
 
     @OneToMany(() => JSONSchema, (jsonSchema) => jsonSchema.dataSupplier)
     jsonSchemas: JSONSchema[];
