@@ -40,3 +40,13 @@ export async function getApiKeysForUser(userId: number): Promise<ApiKeyDto[]> {
 
     return apiKeys;
 }
+
+export async function deleteAPIKey(id: APIKey['id']): Promise<void> {
+    const result = await apiKeyRepository.delete({
+        id,
+    });
+
+    if (result.affected === 0) {
+        throw new NotFoundError('No API key matching the supplied ID was found.');
+    }
+}

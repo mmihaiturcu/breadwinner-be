@@ -10,7 +10,7 @@ export class APIKeyRepository extends Repository<APIKey> {
     }
     async getApiKeysByUserId(userId: User['id']): Promise<ApiKeyDto[]> {
         return await this.find({
-            select: ['prefix', 'hostname', 'createdAt'],
+            select: ['id', 'prefix', 'hostname', 'createdAt'],
             where: {
                 dataProcessor: {
                     id: userId,
