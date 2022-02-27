@@ -1,4 +1,4 @@
-import { User, JSONSchema } from '@/database/models/index.js';
+import { Payload, User } from '@/database/models/index.js';
 import { BeforeInsert, Entity, JoinColumn, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
 
 @Entity()
@@ -10,8 +10,8 @@ export class DataSupplier {
     @JoinColumn({ name: 'id' })
     userDetails: User;
 
-    @OneToMany(() => JSONSchema, (jsonSchema) => jsonSchema.dataSupplier)
-    jsonSchemas: JSONSchema[];
+    @OneToMany(() => Payload, (payload) => payload.dataSupplier)
+    payloads: Payload[];
 
     constructor(User: User) {
         this.userDetails = User;

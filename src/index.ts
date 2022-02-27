@@ -8,9 +8,11 @@ import { APIKeyController } from '@/database/APIKey/APIKeyController.js';
 import { WebSocketServer } from 'ws';
 import { checkAPIKeyValid } from '@/database/APIKey/APIKeyService.js';
 import { ConfirmationController } from './database/Confirmation/ConfirmationController.js';
+import { PayloadController } from './database/Payload/PayloadController.js';
+import { getProcessingPayload } from './database/Payload/PayloadService.js';
 
 useExpressServer(app.expressApp, {
-    controllers: [APIKeyController, UserController, ConfirmationController],
+    controllers: [APIKeyController, UserController, ConfirmationController, PayloadController],
 });
 
 const httpsServer = https.createServer(
@@ -35,8 +37,8 @@ const wss = new WebSocketServer({ noServer: true });
 // #STRETCHGOAL Make API keys based on different clearance regions (maybe different tiers of data, AS IN PREMIUM -> receives important payloads, after having shown loyalty / seriousness)
 
 wss.on('connection', function connection(ws) {
-    ws.on('message', function message(data) {
-        console.log('received: %s', data);
+    ws.on('message', async function message() {
+        ws.send(JSON.stringify(await getProcessingPayload()));
     });
 });
 
@@ -49,7 +51,10 @@ httpsServer.on('upgrade', async function upgrade(request, socket, head) {
             throw new NotFoundError('Received invalid API key');
         }
 
-        await checkAPIKeyValid(apiKey as string, request.headers.origin);
+        await checkAPIKeyValid(
+            apiKey as string,
+            request.headers.host.substring(0, request.headers.host.indexOf(':'))
+        );
 
         wss.handleUpgrade(request, socket, head, function done(ws) {
             wss.emit('connection', ws, request);

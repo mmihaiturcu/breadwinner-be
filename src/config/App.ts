@@ -6,7 +6,6 @@ import {
     DataProcessor,
     DataSupplier,
     FileResource,
-    JSONSchema,
     Payload,
     Confirmation,
 } from '@/database/models/index.js';
@@ -18,6 +17,8 @@ import { UserRepository } from '@/database/User/UserRepository.js';
 import { DataProcessorRepository } from '@/database/DataProcessor/DataProcessorRepository.js';
 import { DataSupplierRepository } from '@/database/DataSupplier/DataSupplierRepository.js';
 import { ConfirmationRepository } from '@/database/Confirmation/ConfirmationRepository.js';
+import { PayloadRepository } from '@/database/Payload/PayloadRepository.js';
+import { ChunkRepository } from '@/database/Chunk/ChunkRepository.js';
 
 class App {
     public static app: App;
@@ -28,6 +29,8 @@ class App {
     public confirmationRepository: ConfirmationRepository;
     public dataProcessorRepository: DataProcessorRepository;
     public dataSupplierRepository: DataSupplierRepository;
+    public payloadRepository: PayloadRepository;
+    public chunkRepository: ChunkRepository;
 
     private constructor() {
         //
@@ -35,7 +38,7 @@ class App {
 
     private static configureExpressApp(): void {
         this.app.expressApp.use(express.urlencoded({ extended: true }));
-        this.app.expressApp.use(express.json()); // To parse the incoming requests with JSON payloads
+        this.app.expressApp.use(express.json({ limit: '50mb' })); // To parse the incoming requests with JSON payloads
         this.app.expressApp.use(
             cors({
                 origin: FRONTEND_URL,
@@ -58,7 +61,6 @@ class App {
                 DataProcessor,
                 DataSupplier,
                 FileResource,
-                JSONSchema,
                 Payload,
                 Confirmation,
             ],
@@ -71,6 +73,8 @@ class App {
         this.app.confirmationRepository = getCustomRepository(ConfirmationRepository);
         this.app.dataProcessorRepository = getCustomRepository(DataProcessorRepository);
         this.app.dataSupplierRepository = getCustomRepository(DataSupplierRepository);
+        this.app.payloadRepository = getCustomRepository(PayloadRepository);
+        this.app.chunkRepository = getCustomRepository(ChunkRepository);
         return;
     }
 

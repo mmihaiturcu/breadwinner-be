@@ -1,14 +1,27 @@
-import { Chunk, JSONSchema } from '@/database/models/index.js';
-import { Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Chunk, DataSupplier } from '@/database/models/index.js';
+import { JSONSchema } from '@/types/models';
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
+/**
+ * Dataset which a DataSupplier uploads, which is to be processed in a specific way as indicated by its associated JSONSchema.
+ * It is formed of multiple (encrypted) chunks, each containing a set amount of data (details such as number of rows in each Chunk, operations etc. are stored in JSONSchema).
+ */
 @Entity()
 export class Payload {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToOne(() => JSONSchema)
+    @Column('json')
     jsonSchema: JSONSchema;
+
+    @ManyToOne(() => DataSupplier)
+    dataSupplier: DataSupplier;
 
     @OneToMany(() => Chunk, (chunk) => chunk.payload)
     chunks: Chunk[];
+
+    constructor(jsonSchema: JSONSchema, dataSupplier: DataSupplier) {
+        this.jsonSchema = jsonSchema;
+        this.dataSupplier = dataSupplier;
+    }
 }

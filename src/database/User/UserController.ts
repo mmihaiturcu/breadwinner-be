@@ -7,6 +7,7 @@ import {
 import { Body, Controller, Get, Param, Post, UseAfter } from 'routing-controllers';
 import { createUser, finishUserAccount, loginUser } from './UserService.js';
 import { getApiKeysForUser } from '../APIKey/APIKeyService.js';
+import { getPayloadsForUser } from '../Payload/PayloadService.js';
 import { User } from './User.js';
 @Controller('/user')
 export class UserController {
@@ -35,5 +36,11 @@ export class UserController {
     async getApiKeysForUser(@Param('id') id: User['id']) {
         const apiKeys = await getApiKeysForUser(id);
         return apiKeys;
+    }
+
+    @Get('/:id/payloads')
+    async getPayloadsForUser(@Param('id') id: User['id']) {
+        const payloads = await getPayloadsForUser(id);
+        return payloads;
     }
 }
