@@ -6,4 +6,15 @@ export class ChunkRepository extends Repository<Chunk> {
     findById(id: Chunk['id']) {
         return this.findOne({ id });
     }
+
+    getChunkOutputPath(id: Chunk['id']) {
+        return this.findOne(
+            {
+                id,
+            },
+            {
+                select: ['outputPath'],
+            }
+        );
+    }
 }

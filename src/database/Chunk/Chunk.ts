@@ -12,19 +12,18 @@ export class Chunk {
     @Column()
     length: number; // No. of elements in the cipherText array saved in inputFile
 
-    @Column('bytea')
-    input: Uint8Array;
+    @Column({ nullable: true })
+    inputPath: string;
 
-    @Column({ type: 'bytea', nullable: true })
-    output: Uint8Array;
+    @Column({ nullable: true })
+    outputPath: string;
 
     @Column()
     processed: boolean;
 
-    constructor(payload: Chunk['payload'], length: Chunk['length'], input: Chunk['input']) {
+    constructor(payload: Chunk['payload'], length: Chunk['length']) {
         this.payload = payload;
         this.length = length;
-        this.input = input;
         this.processed = false;
     }
 }
