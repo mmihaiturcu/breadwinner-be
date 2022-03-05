@@ -19,6 +19,7 @@ import { DataSupplierRepository } from '@/database/DataSupplier/DataSupplierRepo
 import { ConfirmationRepository } from '@/database/Confirmation/ConfirmationRepository.js';
 import { PayloadRepository } from '@/database/Payload/PayloadRepository.js';
 import { ChunkRepository } from '@/database/Chunk/ChunkRepository.js';
+import { FileResourceRepository } from '@/database/FileResource/FileResourceRepository.js';
 
 class App {
     public static app: App;
@@ -31,6 +32,7 @@ class App {
     public dataSupplierRepository: DataSupplierRepository;
     public payloadRepository: PayloadRepository;
     public chunkRepository: ChunkRepository;
+    public fileResourceRepository: FileResourceRepository;
 
     private constructor() {
         //
@@ -75,6 +77,7 @@ class App {
         this.app.dataSupplierRepository = getCustomRepository(DataSupplierRepository);
         this.app.payloadRepository = getCustomRepository(PayloadRepository);
         this.app.chunkRepository = getCustomRepository(ChunkRepository);
+        this.app.fileResourceRepository = getCustomRepository(FileResourceRepository);
         return;
     }
 

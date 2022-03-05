@@ -8,6 +8,7 @@ export class FileResource {
     @Column()
     path: string;
 
-    @Column()
-    hash: string;
+    constructor(path: string) {
+        this.path = path;
+    }
 }

@@ -20,8 +20,12 @@ export class Payload {
     @OneToMany(() => Chunk, (chunk) => chunk.payload)
     chunks: Chunk[];
 
-    constructor(jsonSchema: JSONSchema, dataSupplier: DataSupplier) {
+    @Column()
+    publicKey: string;
+
+    constructor(jsonSchema: JSONSchema, dataSupplier: DataSupplier, publicKey: string) {
         this.jsonSchema = jsonSchema;
         this.dataSupplier = dataSupplier;
+        this.publicKey = publicKey;
     }
 }

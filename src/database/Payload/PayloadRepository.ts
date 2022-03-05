@@ -1,3 +1,4 @@
+import { PayloadToProcess } from '@/types/models/PayloadToProcess.js';
 import { EntityRepository, Repository } from 'typeorm';
 import { User } from '../models/index.js';
 import { Payload } from './Payload.js';
@@ -17,10 +18,17 @@ export class PayloadRepository extends Repository<Payload> {
             .getMany();
     }
 
-    async getPayloadToProcess(): Promise<Payload> {
+    async getPayloadToProcess() {
         return await this.createQueryBuilder('payload')
             .leftJoinAndSelect('payload.chunks', 'chunk')
-            .select(['payload.id', 'payload.jsonSchema', 'chunk.id', 'chunk.length', 'chunk.input'])
+            .select([
+                'payload.id',
+                'payload.jsonSchema',
+                'payload.publicKey',
+                'chunk.id',
+                'chunk.length',
+                'chunk.input',
+            ])
             .where(`chunk.processed = 'f'`)
             .limit(1)
             .getOne();
