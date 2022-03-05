@@ -1,13 +1,9 @@
-import { FileResource } from '@/database/models';
+import { Chunk, Payload } from '@/database/models';
 import { JSONSchema } from './JSONSchema';
 
 export interface PayloadToProcess {
-    id: number;
+    id: Payload['id'];
     jsonSchema: JSONSchema;
-    publicKey: string;
-    chunks: {
-        id: number;
-        length: number;
-        input: string;
-    }[];
+    publicKey: Payload['publicKey'];
+    chunks: Pick<Chunk, 'id' | 'length' | 'inputPath'>[];
 }

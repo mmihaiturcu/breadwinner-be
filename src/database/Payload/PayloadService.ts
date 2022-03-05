@@ -4,9 +4,15 @@ import { Chunk } from '../Chunk/Chunk.js';
 import { User } from '../User/User.js';
 import { Payload } from './Payload.js';
 import { resolve } from 'path';
-import { INPUT_SAVE_PATH } from '@/utils/constants.js';
+import { INPUT_SAVE_PATH, OUTPUT_SAVE_PATH } from '@/utils/constants.js';
 import { appendFileSync, readFileSync } from 'fs';
-import { PayloadToProcess, PayloadToProcessDTO } from '@/types/models/index.js';
+import {
+    ChunkProcessedEventData,
+    JSONSchema,
+    PayloadToProcess,
+    PayloadToProcessDTO,
+} from '@/types/models/index.js';
+import { DecryptPayloadDTOResponse } from '@/types/payloads/responses/DecryptPayloadDTOResponse.js';
 
 const payloadRepository = app.payloadRepository;
 const chunkRepository = app.chunkRepository;
@@ -23,7 +29,7 @@ export async function createPayload(payloadDTO: PayloadDTO) {
         const inputPath = resolve(INPUT_SAVE_PATH, `${chunk.id}`);
         const bytes = payloadDTO.chunks[index].cipherText;
         appendFileSync(inputPath, bytes);
-        chunk.input = inputPath;
+        chunk.inputPath = inputPath;
     });
     chunkRepository.save(savedChunks);
 
@@ -54,15 +60,46 @@ export async function getPayloadsForUser(userId: User['id']) {
 
 export async function getProcessingPayload(): Promise<PayloadToProcessDTO> {
     const payload = (await payloadRepository.getPayloadToProcess()) as unknown as PayloadToProcess;
-    const loadedInput = readFileSync(payload.chunks[0].input, 'utf-8');
+    if (payload) {
+        const chunk = payload.chunks[0];
+        const loadedInput = readFileSync(chunk.inputPath, 'utf-8');
+        return {
+            id: payload.id,
+            jsonSchema: payload.jsonSchema,
+            publicKey: payload.publicKey,
+            chunk: {
+                id: chunk.id,
+                length: chunk.length,
+                input: loadedInput,
+            },
+        };
+    }
+}
+
+export async function saveChunkProcessingResult(data: ChunkProcessedEventData) {
+    const chunk = await chunkRepository.findById(data.chunkId);
+
+    const outputPath = resolve(OUTPUT_SAVE_PATH, `${chunk.id}`);
+    appendFileSync(outputPath, data.result);
+    chunk.outputPath = outputPath;
+    chunk.processed = true;
+    await chunkRepository.save(chunk);
+}
+
+export async function getDecryptInfoForPayload(
+    id: Payload['id']
+): Promise<DecryptPayloadDTOResponse> {
+    const payload = (await payloadRepository.getPayloadDecryptInfo(id)) as unknown as {
+        jsonSchema: JSONSchema;
+        chunks: {
+            id: Chunk['id'];
+            length: Chunk['length'];
+        }[];
+    };
 
     return {
-        id: payload.id,
-        jsonSchema: payload.jsonSchema,
-        publicKey: payload.publicKey,
-        chunk: {
-            ...payload.chunks[0],
-            input: loadedInput,
-        },
+        endResultType:
+            payload.jsonSchema.operations[payload.jsonSchema.operations.length - 1].resultType,
+        chunks: payload.chunks,
     };
 }

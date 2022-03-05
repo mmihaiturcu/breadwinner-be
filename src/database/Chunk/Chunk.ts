@@ -13,10 +13,10 @@ export class Chunk {
     length: number; // No. of elements in the cipherText array saved in inputFile
 
     @Column({ nullable: true })
-    input: string;
+    inputPath: string;
 
     @Column({ nullable: true })
-    output: string;
+    outputPath: string;
 
     @Column()
     processed: boolean;

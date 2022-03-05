@@ -9,10 +9,23 @@ import { WebSocketServer } from 'ws';
 import { checkAPIKeyValid } from '@/database/APIKey/APIKeyService.js';
 import { ConfirmationController } from './database/Confirmation/ConfirmationController.js';
 import { PayloadController } from './database/Payload/PayloadController.js';
-import { getProcessingPayload } from './database/Payload/PayloadService.js';
+import {
+    getProcessingPayload,
+    saveChunkProcessingResult,
+} from './database/Payload/PayloadService.js';
+import { WebsocketEvent } from './types/models/WebsocketEvent.js';
+import { WebsocketEventTypes } from './types/enums/WebsocketEventTypes.js';
+import { ChunkProcessedEventData } from './types/models/ChunkProcessedEventData.js';
+import { ChunkController } from './database/Chunk/ChunkController.js';
 
 useExpressServer(app.expressApp, {
-    controllers: [APIKeyController, UserController, ConfirmationController, PayloadController],
+    controllers: [
+        APIKeyController,
+        UserController,
+        ConfirmationController,
+        PayloadController,
+        ChunkController,
+    ],
 });
 
 const httpsServer = https.createServer(
@@ -37,8 +50,24 @@ const wss = new WebSocketServer({ noServer: true });
 // #STRETCHGOAL Make API keys based on different clearance regions (maybe different tiers of data, AS IN PREMIUM -> receives important payloads, after having shown loyalty / seriousness)
 
 wss.on('connection', function connection(ws) {
-    ws.on('message', async function message() {
-        ws.send(JSON.stringify(await getProcessingPayload()));
+    ws.on('message', async function message(payload) {
+        const message = JSON.parse(payload.toString()) as WebsocketEvent;
+        switch (message.type) {
+            case WebsocketEventTypes.REQUEST_CHUNK: {
+                const processingPayload = await getProcessingPayload();
+
+                if (processingPayload) {
+                    ws.send(JSON.stringify(processingPayload));
+                } else {
+                    ws.send('');
+                }
+                break;
+            }
+            case WebsocketEventTypes.SEND_CHUNK_PROCESSING_RESULT: {
+                const data = message.data as ChunkProcessedEventData;
+                await saveChunkProcessingResult(data);
+            }
+        }
     });
 });
 

@@ -6,3 +6,6 @@ export { JSONSchema } from './JSONSchema';
 export { ChunkDTO } from './ChunkDTO';
 export { PayloadToProcess } from './PayloadToProcess';
 export { PayloadToProcessDTO } from './PayloadToProcessDTO';
+export { WebsocketEvent } from './WebsocketEvent';
+export { ChunkProcessedEventData } from './ChunkProcessedEventData';
+export { Operand } from './Operand';

@@ -27,10 +27,18 @@ export class PayloadRepository extends Repository<Payload> {
                 'payload.publicKey',
                 'chunk.id',
                 'chunk.length',
-                'chunk.input',
+                'chunk.inputPath',
             ])
             .where(`chunk.processed = 'f'`)
             .limit(1)
+            .getOne();
+    }
+
+    async getPayloadDecryptInfo(id: Payload['id']) {
+        return await this.createQueryBuilder('payload')
+            .leftJoinAndSelect('payload.chunks', 'chunk')
+            .select(['payload.jsonSchema', 'chunk.id', 'chunk.length'])
+            .where(`payload.id = :id`, { id })
             .getOne();
     }
 }
