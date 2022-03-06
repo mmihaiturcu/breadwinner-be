@@ -20,6 +20,7 @@ import { ConfirmationRepository } from '@/database/Confirmation/ConfirmationRepo
 import { PayloadRepository } from '@/database/Payload/PayloadRepository.js';
 import { ChunkRepository } from '@/database/Chunk/ChunkRepository.js';
 import { FileResourceRepository } from '@/database/FileResource/FileResourceRepository.js';
+import strictTransportSecurity from 'strict-transport-security';
 
 class App {
     public static app: App;
@@ -46,6 +47,8 @@ class App {
                 origin: FRONTEND_URL,
             })
         );
+        const sts = strictTransportSecurity.getSTS({ 'max-age': { days: 30 } });
+        this.app.expressApp.use(sts);
     }
 
     private static async configureDB(): Promise<Connection> {
