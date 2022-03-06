@@ -1,7 +1,6 @@
-import { getUUIDV4, hashAndSaltPasswordToHex } from '@/utils/helper.js';
-
+import { getUUIDV4, hashAndSaltPasswordToHex, timingSafeEqualStrings } from '@/utils/helper.js';
 import { addWeeks } from 'date-fns';
-import { randomBytes } from 'crypto';
+import { randomBytes, timingSafeEqual } from 'crypto';
 import app from '@/config/App.js';
 import {
     UserCreateRequest,
@@ -29,6 +28,7 @@ const confirmationRepository = app.confirmationRepository;
 const dataSupplierRepository = app.dataSupplierRepository;
 const dataProcessorRepository = app.dataProcessorRepository;
 
+const textEncoder = new TextEncoder();
 export async function createUser(payload: UserCreateRequest): Promise<void> {
     // 1. Create the User
     const user = new User(payload.email, payload.userRole);
@@ -112,8 +112,10 @@ export async function loginUser(payload: UserLoginRequest): Promise<UserLoginRes
     if (user) {
         if (
             user.password &&
-            user.password ===
+            timingSafeEqualStrings(
+                user.password,
                 hashAndSaltPasswordToHex(payload.password, Buffer.from(user.salt, 'hex'))
+            )
         ) {
             return {
                 id: user.id,
