@@ -6,6 +6,9 @@ export const DB_PORT = 5432;
 export const FRONTEND_URL = 'https://localhost:8080';
 export const BACKEND_URL = `https://localhost:${SERVER_PORT}`;
 
+export const REDIS_HOST = 'localhost';
+export const REDIS_PORT = 6379;
+
 export const EMAIL_HOST = 'smtp.gmail.com';
 export const EMAIL_HOST_PORT = 465;
 export const EMAIL_USERNAME = 'thalros1760@gmail.com';

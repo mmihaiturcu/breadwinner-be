@@ -21,6 +21,7 @@ import { PayloadRepository } from '@/database/Payload/PayloadRepository.js';
 import { ChunkRepository } from '@/database/Chunk/ChunkRepository.js';
 import { FileResourceRepository } from '@/database/FileResource/FileResourceRepository.js';
 import strictTransportSecurity from 'strict-transport-security';
+import { sessionMiddleware } from '@/middleware/index.js';
 
 class App {
     public static app: App;
@@ -40,11 +41,13 @@ class App {
     }
 
     private static configureExpressApp(): void {
+        this.app.expressApp.use(sessionMiddleware);
         this.app.expressApp.use(express.urlencoded({ extended: true }));
         this.app.expressApp.use(express.json({ limit: '50mb' })); // To parse the incoming requests with JSON payloads
         this.app.expressApp.use(
             cors({
                 origin: FRONTEND_URL,
+                credentials: true,
             })
         );
         const sts = strictTransportSecurity.getSTS({ 'max-age': { days: 30 } });
