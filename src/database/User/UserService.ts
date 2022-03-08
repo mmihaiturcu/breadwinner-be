@@ -19,7 +19,7 @@ import {
 } from '@/utils/emailService.js';
 import { FRONTEND_URL, USER_ROLE_TO_STRING } from '@/utils/constants.js';
 import { NotFoundError, UnauthorizedError } from 'routing-controllers';
-import { UserLoginResponse } from '@/types/payloads/responses/UserLoginResponse.js';
+import { UserDetails } from '@/types/payloads/responses/UserDetails.js';
 import { QueryFailedError } from 'typeorm';
 import { HTTPConflictError } from '@/errors/HTTPConflictError.js';
 
@@ -104,7 +104,7 @@ export async function finishUserAccount(payload: UserFinishRequest): Promise<voi
     }
 }
 
-export async function loginUser(payload: UserLoginRequest): Promise<UserLoginResponse> {
+export async function loginUser(payload: UserLoginRequest): Promise<UserDetails> {
     const user = await userRepository.findOne({
         email: payload.email,
     });

@@ -1,6 +1,6 @@
 import { Role } from '@/types/enums';
 
-export class UserLoginResponse {
+export class UserDetails {
     id: number;
 
     email: string;
