@@ -1,7 +1,7 @@
 export function authenticationMiddleware(req, res, next) {
-    if (!req.session || !req.session.user) {
-        const err = new Error('You shall not pass');
-        next(err);
+    if (!req.session || !req.session.user.id) {
+        res.status(401).send('Session not found');
+    } else {
+        next();
     }
-    next();
 }
