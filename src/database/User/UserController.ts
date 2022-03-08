@@ -8,28 +8,43 @@ import { createUser, finishUserAccount, loginUser } from './UserService.js';
 import { getApiKeysForUser } from '../APIKey/APIKeyService.js';
 import { getPayloadsForUser } from '../Payload/PayloadService.js';
 import { User } from './User.js';
-import { authenticationMiddleware, loggingMiddleware } from '@/middleware/index.js';
+import { authenticationMiddleware, loggingMiddleware, csrfMiddleware } from '@/middleware/index.js';
+import { getUUIDV4 } from '@/utils/helper.js';
 
 @UseAfter(loggingMiddleware)
 @Controller('/user')
 export class UserController {
+    @UseBefore(csrfMiddleware)
+    @Get('/csrf')
+    async getCSRFToken(@Req() req) {
+        req.session.user = getUUIDV4();
+        return req.csrfToken();
+    }
+
+    @UseBefore(csrfMiddleware)
     @Post('/create')
     async createAccount(@Body() payload: UserCreateRequest) {
         await createUser(payload);
         return null;
     }
 
+    @UseBefore(csrfMiddleware)
     @Post('/finish')
     async finishAccount(@Body() payload: UserFinishRequest) {
         await finishUserAccount(payload);
         return null;
     }
 
+    @UseBefore(csrfMiddleware)
     @Post('/login')
     async login(@Req() req, @Body() payload: UserLoginRequest) {
-        const userDetails = await loginUser(payload);
-        req.session.user = userDetails;
-        return userDetails;
+        return new Promise((resolve) => {
+            req.session.regenerate(async () => {
+                const userDetails = await loginUser(payload);
+                req.session.user = userDetails;
+                resolve({ ...userDetails, csrfToken: req.csrfToken() });
+            });
+        });
     }
 
     @UseBefore(authenticationMiddleware)

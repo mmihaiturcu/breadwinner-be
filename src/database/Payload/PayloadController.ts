@@ -1,4 +1,4 @@
-import { authenticationMiddleware, loggingMiddleware } from '@/middleware/index.js';
+import { authenticationMiddleware, csrfMiddleware, loggingMiddleware } from '@/middleware/index.js';
 import { PayloadDTO } from '@/types/models/index.js';
 import { Body, Controller, Get, Param, Post, UseAfter, UseBefore } from 'routing-controllers';
 import { Payload } from './Payload.js';
@@ -8,6 +8,7 @@ import { createPayload, getDecryptInfoForPayload } from './PayloadService.js';
 @UseAfter(loggingMiddleware)
 @Controller('/payload')
 export class PayloadController {
+    @UseBefore(csrfMiddleware)
     @Post('/createPayload')
     async createPayload(@Body() payload: PayloadDTO) {
         await createPayload(payload);
