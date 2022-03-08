@@ -17,8 +17,24 @@ export class UserController {
     @UseBefore(csrfMiddleware)
     @Get('/csrf')
     async getCSRFToken(@Req() req) {
-        req.session.user = getUUIDV4();
-        return req.csrfToken();
+        return new Promise((resolve) => {
+            req.session.regenerate(async () => {
+                req.session.user = getUUIDV4();
+                resolve(req.csrfToken());
+            });
+        });
+    }
+
+    @UseBefore(csrfMiddleware)
+    @Get('/loggedInSession')
+    async getExistingLoggedInSession(@Req() req) {
+        if (req.session && req.session.user && typeof req.session.user === 'object') {
+            return {
+                ...req.session.user,
+                csrfToken: req.csrfToken(),
+            };
+        }
+        return null;
     }
 
     @UseBefore(csrfMiddleware)
@@ -59,5 +75,17 @@ export class UserController {
     async getPayloadsForUser(@Param('id') id: User['id']) {
         const payloads = await getPayloadsForUser(id);
         return payloads;
+    }
+
+    @UseBefore(authenticationMiddleware)
+    @UseBefore(csrfMiddleware)
+    @Post('/logout')
+    async logout(@Req() req) {
+        return new Promise((resolve) => {
+            req.session.regenerate(() => {
+                req.session.user = getUUIDV4();
+                resolve(req.csrfToken());
+            });
+        });
     }
 }
