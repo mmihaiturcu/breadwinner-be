@@ -3,9 +3,11 @@ import connectRedis from 'connect-redis';
 import redisClient from '@/config/redisClient.js';
 
 const RedisStore = connectRedis(session);
+const store = new RedisStore({ client: redisClient });
+store.clear();
 
 export const sessionMiddleware = session({
-    store: new RedisStore({ client: redisClient }),
+    store: store,
     secret: 'oZQrLuKL1UlldsU9e24W',
     saveUninitialized: false,
     resave: false,
