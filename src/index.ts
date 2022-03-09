@@ -45,8 +45,8 @@ app.expressApp.use(function (error, req, res, next) {
 } as ErrorRequestHandler);
 
 if (process.env.npm_config_SYNC !== undefined) {
-    await cleanDirectory(INPUT_SAVE_PATH);
-    await cleanDirectory(OUTPUT_SAVE_PATH);
+    cleanDirectory(INPUT_SAVE_PATH);
+    cleanDirectory(OUTPUT_SAVE_PATH);
 }
 
 const httpsServer = https.createServer(

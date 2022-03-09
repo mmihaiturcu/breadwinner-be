@@ -4,7 +4,10 @@ import redisClient from '@/config/redisClient.js';
 
 const RedisStore = connectRedis(session);
 const store = new RedisStore({ client: redisClient });
-store.clear();
+
+if (process.env.npm_config_SYNC !== undefined) {
+    store.clear();
+}
 
 export const sessionMiddleware = session({
     store: store,
