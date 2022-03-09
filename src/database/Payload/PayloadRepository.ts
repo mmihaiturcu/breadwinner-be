@@ -13,7 +13,7 @@ export class PayloadRepository extends Repository<Payload> {
         return await this.createQueryBuilder('payload')
             .leftJoinAndSelect('payload.chunks', 'chunk')
             .leftJoin('payload.dataSupplier', 'dataSupplier')
-            .select(['payload.id', 'chunk.processed', 'chunk.length'])
+            .select(['payload.id', 'payload.label', 'chunk.processed', 'chunk.length'])
             .where('dataSupplier.id = :dataSupplierId', { dataSupplierId: userId })
             .getMany();
     }

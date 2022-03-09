@@ -1,8 +1,13 @@
 import app from '@/config/App.js';
-import { SERVER_PORT } from '@/utils/constants.js';
+import { INPUT_SAVE_PATH, OUTPUT_SAVE_PATH, SERVER_PORT } from '@/utils/constants.js';
 import https from 'https';
 import { readFileSync } from 'fs';
-import { NotFoundError, useExpressServer } from 'routing-controllers';
+import {
+    HttpError,
+    InternalServerError,
+    NotFoundError,
+    useExpressServer,
+} from 'routing-controllers';
 import { UserController } from '@/database/User/UserController.js';
 import { APIKeyController } from '@/database/APIKey/APIKeyController.js';
 import { WebSocketServer } from 'ws';
@@ -17,6 +22,8 @@ import { WebsocketEvent } from './types/models/WebsocketEvent.js';
 import { WebsocketEventTypes } from './types/enums/WebsocketEventTypes.js';
 import { ChunkProcessedEventData } from './types/models/ChunkProcessedEventData.js';
 import { ChunkController } from './database/Chunk/ChunkController.js';
+import { ErrorRequestHandler } from 'express';
+import { cleanDirectory } from './utils/helper.js';
 
 useExpressServer(app.expressApp, {
     controllers: [
@@ -26,7 +33,21 @@ useExpressServer(app.expressApp, {
         PayloadController,
         ChunkController,
     ],
+    defaultErrorHandler: false,
 });
+
+app.expressApp.use(function (error, req, res, next) {
+    if (error instanceof HttpError) {
+        res.status(error.httpCode).send(error);
+    } else {
+        res.status(500).send(new InternalServerError('Unhandled error'));
+    }
+} as ErrorRequestHandler);
+
+if (process.env.npm_config_SYNC !== undefined) {
+    await cleanDirectory(INPUT_SAVE_PATH);
+    await cleanDirectory(OUTPUT_SAVE_PATH);
+}
 
 const httpsServer = https.createServer(
     {

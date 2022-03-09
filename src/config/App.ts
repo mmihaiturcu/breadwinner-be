@@ -72,6 +72,7 @@ class App {
                 Payload,
                 Confirmation,
             ],
+            dropSchema: process.env.npm_config_SYNC !== undefined,
             synchronize: true,
             logging: false,
         });

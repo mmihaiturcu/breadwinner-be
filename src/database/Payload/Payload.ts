@@ -11,6 +11,12 @@ export class Payload {
     @PrimaryGeneratedColumn()
     id: number;
 
+    @Column()
+    label: string;
+
+    @Column()
+    publicKey: string;
+
     @Column('json')
     jsonSchema: JSONSchema;
 
@@ -20,10 +26,13 @@ export class Payload {
     @OneToMany(() => Chunk, (chunk) => chunk.payload)
     chunks: Chunk[];
 
-    @Column()
-    publicKey: string;
-
-    constructor(jsonSchema: JSONSchema, dataSupplier: DataSupplier, publicKey: string) {
+    constructor(
+        label: string,
+        jsonSchema: JSONSchema,
+        dataSupplier: DataSupplier,
+        publicKey: string
+    ) {
+        this.label = label;
         this.jsonSchema = jsonSchema;
         this.dataSupplier = dataSupplier;
         this.publicKey = publicKey;

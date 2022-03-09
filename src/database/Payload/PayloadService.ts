@@ -20,7 +20,12 @@ const dataSupplierRepository = app.dataSupplierRepository;
 
 export async function createPayload(payloadDTO: PayloadDTO) {
     const dataSupplier = await dataSupplierRepository.findById(payloadDTO.userId);
-    const payload = new Payload(payloadDTO.jsonSchema, dataSupplier, payloadDTO.publicKey);
+    const payload = new Payload(
+        payloadDTO.label,
+        payloadDTO.jsonSchema,
+        dataSupplier,
+        payloadDTO.publicKey
+    );
     const savedPayload = await payloadRepository.save(payload);
 
     const chunks = payloadDTO.chunks.map((chunk) => new Chunk(savedPayload, chunk.length));
@@ -45,6 +50,7 @@ export async function getPayloadsForUser(userId: User['id']) {
     return payloads.map((payload) => {
         return {
             id: payload.id,
+            label: payload.label,
             noChunks: payload.chunks.length,
             totalDataLength: payload.chunks
                 .map((chunk) => chunk.length)
