@@ -28,8 +28,9 @@ const confirmationRepository = app.confirmationRepository;
 const dataSupplierRepository = app.dataSupplierRepository;
 const dataProcessorRepository = app.dataProcessorRepository;
 
-const textEncoder = new TextEncoder();
-export async function createUser(payload: UserCreateRequest): Promise<void> {
+export async function createUser(
+    payload: UserCreateRequest
+): Promise<{ user: User; confirmation: Confirmation }> {
     // 1. Create the User
     const user = new User(payload.email, payload.userRole);
 
@@ -56,7 +57,13 @@ export async function createUser(payload: UserCreateRequest): Promise<void> {
     const confirmation = new Confirmation(getUUIDV4(), addWeeks(new Date(), 1), user);
     await confirmationRepository.save(confirmation);
 
-    // 4. Send email to user
+    return {
+        user,
+        confirmation,
+    };
+}
+
+export async function sendAccountConfirmationEmail(user: User, confirmation: Confirmation) {
     await sendMail({
         to: user.email,
         subject: 'Your Breadwinner account confirmation link awaits!',
@@ -128,4 +135,26 @@ export async function loginUser(payload: UserLoginRequest): Promise<UserDetails>
     } else {
         throw new UnauthorizedError('No user matching the supplied credentials was found.');
     }
+}
+
+export async function createDefaultUsers(): Promise<void> {
+    const creationPayloadThalros = await createUser({
+        email: 'thalros1760@gmail.com',
+        userRole: Role.DATA_SUPPLIER,
+    });
+
+    await finishUserAccount({
+        confirmationUuid: creationPayloadThalros.confirmation.uuid,
+        password: 'Pass!123',
+    });
+
+    const creationPayloadMihai = await createUser({
+        email: 'mihai.turcu1760@gmail.com',
+        userRole: Role.DATA_PROCESSOR,
+    });
+
+    await finishUserAccount({
+        confirmationUuid: creationPayloadMihai.confirmation.uuid,
+        password: 'Pass!123',
+    });
 }

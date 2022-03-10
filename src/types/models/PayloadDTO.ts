@@ -1,5 +1,5 @@
 import { User } from '@/database/models';
-import { ArrayMinSize, IsArray, IsBase64, IsObject, MinLength } from 'class-validator';
+import { ArrayMinSize, IsArray, IsBase64, IsObject, IsOptional, MinLength } from 'class-validator';
 import { ChunkDTO, JSONSchema } from '.';
 
 export class PayloadDTO {
@@ -17,4 +17,8 @@ export class PayloadDTO {
 
     @IsBase64()
     publicKey: string;
+
+    @IsOptional()
+    @IsBase64()
+    galoisKeys: string;
 }

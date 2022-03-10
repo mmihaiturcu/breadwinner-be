@@ -24,6 +24,7 @@ import { ChunkProcessedEventData } from './types/models/ChunkProcessedEventData.
 import { ChunkController } from './database/Chunk/ChunkController.js';
 import { ErrorRequestHandler } from 'express';
 import { cleanDirectory } from './utils/helper.js';
+import { createDefaultUsers } from './database/User/UserService.js';
 
 useExpressServer(app.expressApp, {
     controllers: [
@@ -44,11 +45,6 @@ app.expressApp.use(function (error, req, res, next) {
     }
 } as ErrorRequestHandler);
 
-if (process.env.npm_config_SYNC !== undefined) {
-    cleanDirectory(INPUT_SAVE_PATH);
-    cleanDirectory(OUTPUT_SAVE_PATH);
-}
-
 const httpsServer = https.createServer(
     {
         key: readFileSync('src/config/private.pem', 'utf-8'),
@@ -60,6 +56,12 @@ const httpsServer = https.createServer(
 httpsServer.listen(SERVER_PORT);
 
 console.log(`Server listening on port ${SERVER_PORT}...`);
+
+if (process.env.npm_config_SYNC !== undefined) {
+    cleanDirectory(INPUT_SAVE_PATH);
+    cleanDirectory(OUTPUT_SAVE_PATH);
+    await createDefaultUsers();
+}
 
 const wss = new WebSocketServer({ noServer: true });
 
@@ -93,7 +95,6 @@ wss.on('connection', function connection(ws) {
 });
 
 httpsServer.on('upgrade', async function upgrade(request, socket, head) {
-    // This function is not defined on purpose. Implement it with your own logic.
     try {
         const apiKey = request.headers['sec-websocket-protocol'];
 

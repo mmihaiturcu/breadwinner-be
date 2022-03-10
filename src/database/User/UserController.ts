@@ -4,7 +4,12 @@ import {
     UserLoginRequest,
 } from '@/types/payloads/requests/index.js';
 import { Body, Controller, Get, Param, Post, UseAfter, Req, UseBefore } from 'routing-controllers';
-import { createUser, finishUserAccount, loginUser } from './UserService.js';
+import {
+    createUser,
+    finishUserAccount,
+    loginUser,
+    sendAccountConfirmationEmail,
+} from './UserService.js';
 import { getApiKeysForUser } from '../APIKey/APIKeyService.js';
 import { getPayloadsForUser } from '../Payload/PayloadService.js';
 import { User } from './User.js';
@@ -38,7 +43,8 @@ export class UserController {
     @UseBefore(csrfMiddleware)
     @Post('/create')
     async createAccount(@Body() payload: UserCreateRequest) {
-        await createUser(payload);
+        const { user, confirmation } = await createUser(payload);
+        await sendAccountConfirmationEmail(user, confirmation);
         return null;
     }
 

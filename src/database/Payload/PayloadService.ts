@@ -24,7 +24,8 @@ export async function createPayload(payloadDTO: PayloadDTO) {
         payloadDTO.label,
         payloadDTO.jsonSchema,
         dataSupplier,
-        payloadDTO.publicKey
+        payloadDTO.publicKey,
+        payloadDTO.galoisKeys
     );
     const savedPayload = await payloadRepository.save(payload);
 
@@ -78,6 +79,7 @@ export async function getProcessingPayload(): Promise<PayloadToProcessDTO> {
                 length: chunk.length,
                 input: loadedInput,
             },
+            galoisKeys: payload.galoisKeys,
         };
     }
 }
