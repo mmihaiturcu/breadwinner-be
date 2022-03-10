@@ -17,6 +17,9 @@ export class Payload {
     @Column()
     publicKey: string;
 
+    @Column({ nullable: true })
+    galoisKeys: string;
+
     @Column('json')
     jsonSchema: JSONSchema;
 
@@ -30,11 +33,13 @@ export class Payload {
         label: string,
         jsonSchema: JSONSchema,
         dataSupplier: DataSupplier,
-        publicKey: string
+        publicKey: string,
+        galoisKeys?: string
     ) {
         this.label = label;
         this.jsonSchema = jsonSchema;
         this.dataSupplier = dataSupplier;
         this.publicKey = publicKey;
+        this.galoisKeys = galoisKeys;
     }
 }

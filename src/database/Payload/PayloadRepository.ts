@@ -25,6 +25,7 @@ export class PayloadRepository extends Repository<Payload> {
                 'payload.id',
                 'payload.jsonSchema',
                 'payload.publicKey',
+                'payload.galoisKeys',
                 'chunk.id',
                 'chunk.length',
                 'chunk.inputPath',
