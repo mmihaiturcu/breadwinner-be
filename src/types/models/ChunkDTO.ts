@@ -1,4 +1,4 @@
 export interface ChunkDTO {
     length: number;
-    cipherText: string; // serialized CipherText
+    cipherText: Record<string, string>; // serialized CipherText
 }

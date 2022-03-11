@@ -34,7 +34,7 @@ export async function createPayload(payloadDTO: PayloadDTO) {
     savedChunks.forEach((chunk, index) => {
         const inputPath = resolve(INPUT_SAVE_PATH, `${chunk.id}`);
         const bytes = payloadDTO.chunks[index].cipherText;
-        appendFileSync(inputPath, bytes);
+        appendFileSync(inputPath, JSON.stringify(bytes));
         chunk.inputPath = inputPath;
     });
     chunkRepository.save(savedChunks);
@@ -77,7 +77,7 @@ export async function getProcessingPayload(): Promise<PayloadToProcessDTO> {
             chunk: {
                 id: chunk.id,
                 length: chunk.length,
-                input: loadedInput,
+                columnsData: loadedInput,
             },
             galoisKeys: payload.galoisKeys,
         };
