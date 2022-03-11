@@ -6,7 +6,7 @@ export interface PayloadToProcessDTO {
     chunk: {
         id: number;
         length: number;
-        input: string;
+        columnsData: string;
     };
     publicKey: string;
     galoisKeys: string;
