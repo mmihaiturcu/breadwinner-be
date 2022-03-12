@@ -6,5 +6,6 @@ export interface PayloadToProcess {
     jsonSchema: JSONSchema;
     publicKey: Payload['publicKey'];
     galoisKeys: Payload['galoisKeys'];
+    relinKeys: Payload['relinKeys'];
     chunks: Pick<Chunk, 'id' | 'length' | 'inputPath'>[];
 }

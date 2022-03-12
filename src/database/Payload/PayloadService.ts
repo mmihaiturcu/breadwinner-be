@@ -25,7 +25,8 @@ export async function createPayload(payloadDTO: PayloadDTO) {
         payloadDTO.jsonSchema,
         dataSupplier,
         payloadDTO.publicKey,
-        payloadDTO.galoisKeys
+        payloadDTO.galoisKeys,
+        payloadDTO.relinKeys
     );
     const savedPayload = await payloadRepository.save(payload);
 
@@ -81,6 +82,7 @@ export async function getProcessingPayload(): Promise<PayloadToProcessDTO> {
                 columnsData: loadedInput,
             },
             galoisKeys: payload.galoisKeys,
+            relinKeys: payload.relinKeys,
         };
     }
 }

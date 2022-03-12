@@ -21,4 +21,8 @@ export class PayloadDTO {
     @IsOptional()
     @IsBase64()
     galoisKeys: string;
+
+    @IsOptional()
+    @IsBase64()
+    relinKeys: string;
 }

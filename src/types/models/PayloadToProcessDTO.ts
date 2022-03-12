@@ -10,4 +10,5 @@ export interface PayloadToProcessDTO {
     };
     publicKey: string;
     galoisKeys: string;
+    relinKeys: string;
 }

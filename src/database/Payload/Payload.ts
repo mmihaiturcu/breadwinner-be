@@ -20,6 +20,9 @@ export class Payload {
     @Column({ nullable: true })
     galoisKeys: string;
 
+    @Column({ nullable: true })
+    relinKeys: string;
+
     @Column('json')
     jsonSchema: JSONSchema;
 
@@ -34,12 +37,14 @@ export class Payload {
         jsonSchema: JSONSchema,
         dataSupplier: DataSupplier,
         publicKey: string,
-        galoisKeys?: string
+        galoisKeys?: string,
+        relinKeys?: string
     ) {
         this.label = label;
         this.jsonSchema = jsonSchema;
         this.dataSupplier = dataSupplier;
         this.publicKey = publicKey;
         this.galoisKeys = galoisKeys;
+        this.relinKeys = relinKeys;
     }
 }

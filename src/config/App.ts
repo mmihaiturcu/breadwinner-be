@@ -43,7 +43,7 @@ class App {
     private static configureExpressApp(): void {
         this.app.expressApp.use(sessionMiddleware);
         this.app.expressApp.use(express.urlencoded({ extended: true }));
-        this.app.expressApp.use(express.json({ limit: '50mb' })); // To parse the incoming requests with JSON payloads
+        this.app.expressApp.use(express.json({ limit: '100mb' })); // To parse the incoming requests with JSON payloads
         this.app.expressApp.use(
             cors({
                 origin: FRONTEND_URL,
