@@ -9,6 +9,7 @@ import {
     finishUserAccount,
     loginUser,
     sendAccountConfirmationEmail,
+    validateResourceBelongsToSessionUser,
 } from './UserService.js';
 import { getApiKeysForUser } from '../APIKey/APIKeyService.js';
 import { getPayloadsForUser } from '../Payload/PayloadService.js';
@@ -66,14 +67,16 @@ export class UserController {
 
     @UseBefore(authenticationMiddleware)
     @Get('/:id/apiKeys')
-    async getApiKeysForUser(@Param('id') id: User['id']) {
+    async getApiKeysForUser(@Req() req, @Param('id') id: User['id']) {
+        validateResourceBelongsToSessionUser(req.session.user.id, id);
         const apiKeys = await getApiKeysForUser(id);
         return apiKeys;
     }
 
     @UseBefore(authenticationMiddleware)
     @Get('/:id/payloads')
-    async getPayloadsForUser(@Param('id') id: User['id']) {
+    async getPayloadsForUser(@Req() req, @Param('id') id: User['id']) {
+        validateResourceBelongsToSessionUser(req.session.user.id, id);
         const payloads = await getPayloadsForUser(id);
         return payloads;
     }
