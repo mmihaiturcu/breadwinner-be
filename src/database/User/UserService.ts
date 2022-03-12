@@ -158,3 +158,12 @@ export async function createDefaultUsers(): Promise<void> {
         password: 'Pass!123',
     });
 }
+
+export function validateResourceBelongsToSessionUser(sessionUserId, userId) {
+    const resourceBelongsToSession = sessionUserId === userId;
+    if (!resourceBelongsToSession) {
+        throw new UnauthorizedError(
+            'Resource does not belong to the user attached to this session'
+        );
+    }
+}
