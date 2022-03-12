@@ -70,6 +70,7 @@ export async function getProcessingPayload(): Promise<PayloadToProcessDTO> {
     if (payload) {
         const chunk = payload.chunks[0];
         const loadedInput = readFileSync(chunk.inputPath, 'utf-8');
+
         return {
             id: payload.id,
             jsonSchema: payload.jsonSchema,

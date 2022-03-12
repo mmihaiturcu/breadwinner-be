@@ -1,4 +1,3 @@
-import { PayloadToProcess } from '@/types/models/PayloadToProcess.js';
 import { EntityRepository, Repository } from 'typeorm';
 import { User } from '../models/index.js';
 import { Payload } from './Payload.js';
@@ -40,6 +39,7 @@ export class PayloadRepository extends Repository<Payload> {
             .leftJoinAndSelect('payload.chunks', 'chunk')
             .select(['payload.jsonSchema', 'chunk.id', 'chunk.length'])
             .where(`payload.id = :id`, { id })
+            .orderBy('chunk.id', 'ASC')
             .getOne();
     }
 }
