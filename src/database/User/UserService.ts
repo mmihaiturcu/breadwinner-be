@@ -1,8 +1,9 @@
 import { getUUIDV4, hashAndSaltPasswordToHex, timingSafeEqualStrings } from '@/utils/helper.js';
 import { addWeeks } from 'date-fns';
-import { randomBytes, timingSafeEqual } from 'crypto';
+import { randomBytes } from 'crypto';
 import app from '@/config/App.js';
 import {
+    Enable2FARequest,
     UserCreateRequest,
     UserFinishRequest,
     UserLoginRequest,
@@ -18,10 +19,18 @@ import {
     sendMail,
 } from '@/utils/emailService.js';
 import { FRONTEND_URL, USER_ROLE_TO_STRING } from '@/utils/constants.js';
-import { NotFoundError, UnauthorizedError } from 'routing-controllers';
+import {
+    BadRequestError,
+    InternalServerError,
+    NotFoundError,
+    UnauthorizedError,
+} from 'routing-controllers';
 import { UserDetails } from '@/types/payloads/responses/UserDetails.js';
 import { QueryFailedError } from 'typeorm';
 import { HTTPConflictError } from '@/errors/HTTPConflictError.js';
+import { authenticator } from 'otplib';
+import { toDataURL } from 'qrcode';
+import { GetTrialQRCodeResponse } from '@/types/payloads/responses/GetTrialQRCodeResponse.js';
 
 const userRepository = app.userRepository;
 const confirmationRepository = app.confirmationRepository;
@@ -111,7 +120,9 @@ export async function finishUserAccount(payload: UserFinishRequest): Promise<voi
     }
 }
 
-export async function loginUser(payload: UserLoginRequest): Promise<UserDetails> {
+export async function loginUser(
+    payload: UserLoginRequest
+): Promise<{ userDetails: UserDetails; secretFor2FA: User['otpSecret'] }> {
     const user = await userRepository.findOne({
         email: payload.email,
     });
@@ -125,9 +136,8 @@ export async function loginUser(payload: UserLoginRequest): Promise<UserDetails>
             )
         ) {
             return {
-                id: user.id,
-                email: user.email,
-                role: user.role,
+                userDetails: { id: user.id, email: user.email, role: user.role },
+                secretFor2FA: user.otpSecret,
             };
         } else {
             throw new UnauthorizedError('No user matching the supplied credentials was found.');
@@ -165,5 +175,54 @@ export function validateResourceBelongsToSessionUser(sessionUserId, userId) {
         throw new UnauthorizedError(
             'Resource does not belong to the user attached to this session'
         );
+    }
+}
+
+export async function getTrialQRCode(userEmail): Promise<GetTrialQRCodeResponse> {
+    try {
+        const secret = authenticator.generateSecret();
+        const otpauth = authenticator.keyuri(userEmail, 'Breadwinner', secret);
+        const qrCodeDataURI = await toDataURL(otpauth);
+        return { qrCodeDataURI, secret: secret };
+    } catch (err) {
+        throw new InternalServerError('Could not generate trial QR code.');
+    }
+}
+
+export async function enable2FA(userId: User['id'], payload: Enable2FARequest) {
+    const verified = authenticator.verify({
+        secret: payload.secret,
+        token: payload.token,
+    });
+    if (verified) {
+        const user = await userRepository.findById(userId);
+        user.otpSecret = payload.secret;
+        await userRepository.save(user);
+    } else {
+        throw new BadRequestError(
+            'Token is incorrect or stale, validation could not be performed.'
+        );
+    }
+}
+
+export async function disable2FA(userId: User['id']) {
+    const user = await userRepository.findById(userId);
+
+    if (user) {
+        user.otpSecret = null;
+        await userRepository.save(user);
+    } else {
+        throw new NotFoundError('User not found.');
+    }
+}
+
+export function validate2FAToken(secret: User['otpSecret'], token: string) {
+    const validated = authenticator.verify({
+        secret,
+        token,
+    });
+
+    if (!validated) {
+        throw new UnauthorizedError('2FA Token is invalid.');
     }
 }

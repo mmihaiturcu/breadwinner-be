@@ -13,8 +13,7 @@ export class PayloadController {
     @UseBefore(csrfMiddleware)
     @Post('/createPayload')
     async createPayload(@Req() req, @Body() payload: PayloadDTO) {
-        validateResourceBelongsToSessionUser(req.session.user.id, payload.userId);
-        await createPayload(payload);
+        await createPayload(req.session.user.id, payload);
         return null;
     }
 

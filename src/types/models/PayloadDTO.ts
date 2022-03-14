@@ -3,8 +3,6 @@ import { ArrayMinSize, IsArray, IsBase64, IsObject, IsOptional, MinLength } from
 import { ChunkDTO, JSONSchema } from '.';
 
 export class PayloadDTO {
-    userId: User['id'];
-
     @IsArray()
     @ArrayMinSize(1)
     chunks: ChunkDTO[];
