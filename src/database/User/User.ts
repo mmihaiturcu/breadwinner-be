@@ -24,7 +24,7 @@ export class User {
     @Column('text', {
         nullable: true,
     })
-    otpSecret: string;
+    otpSecret?: string;
 
     @Column()
     role: Role;

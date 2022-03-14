@@ -1,6 +1,15 @@
 import { authenticationMiddleware, loggingMiddleware, csrfMiddleware } from '@/middleware/index.js';
 import { CreateApiKeyRequest } from '@/types/payloads/requests/index.js';
-import { Body, Controller, Post, UseAfter, Delete, Param, UseBefore } from 'routing-controllers';
+import {
+    Body,
+    Controller,
+    Post,
+    UseAfter,
+    Delete,
+    Param,
+    UseBefore,
+    Req,
+} from 'routing-controllers';
 import { APIKey } from './APIKey.js';
 import { createAPIKey, deleteAPIKey } from './APIKeyService.js';
 
@@ -10,8 +19,8 @@ import { createAPIKey, deleteAPIKey } from './APIKeyService.js';
 export class APIKeyController {
     @UseBefore(csrfMiddleware)
     @Post('/create')
-    async create(@Body() payload: CreateApiKeyRequest) {
-        const { apiKeyString } = await createAPIKey(payload);
+    async create(@Req() req, @Body() payload: CreateApiKeyRequest) {
+        const { apiKeyString } = await createAPIKey(req.session.user.id, payload);
         return apiKeyString;
     }
 

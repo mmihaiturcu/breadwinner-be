@@ -5,11 +5,13 @@ import { APIKey } from './APIKey.js';
 import app from '@/config/App.js';
 import { ApiKeyDto } from '@/types/models/ApiKeyDto.js';
 import { CreateApiKeyRequest } from '@/types/payloads/requests/CreateApiKeyRequest.js';
+import { User } from '../User/User.js';
 
 const apiKeyRepository = app.apiKeyRepository;
 const dataProcessorRepository = app.dataProcessorRepository;
 
 export async function createAPIKey(
+    userId: User['id'],
     payload: CreateApiKeyRequest
 ): Promise<{ apiKey: APIKey; apiKeyString: string }> {
     const apiKeyString = getUUIDV4();
@@ -18,7 +20,7 @@ export async function createAPIKey(
         generateSHA512(apiKeyString),
         payload.hostname
     );
-    apiKey.dataProcessor = await dataProcessorRepository.findById(payload.userId);
+    apiKey.dataProcessor = await dataProcessorRepository.findById(userId);
     return { apiKey: await apiKeyRepository.save(apiKey), apiKeyString };
 }
 

@@ -2,13 +2,18 @@ import {
     UserCreateRequest,
     UserFinishRequest,
     UserLoginRequest,
+    Enable2FARequest,
 } from '@/types/payloads/requests/index.js';
-import { Body, Controller, Get, Post, UseAfter, Req, UseBefore } from 'routing-controllers';
+import { Body, Controller, Get, Post, UseAfter, Req, UseBefore, Delete } from 'routing-controllers';
 import {
     createUser,
+    disable2FA,
+    enable2FA,
     finishUserAccount,
+    getTrialQRCode,
     loginUser,
     sendAccountConfirmationEmail,
+    validate2FAToken,
 } from './UserService.js';
 import { getApiKeysForUser } from '../APIKey/APIKeyService.js';
 import { getPayloadsForUser } from '../Payload/PayloadService.js';
@@ -57,10 +62,15 @@ export class UserController {
     @UseBefore(csrfMiddleware)
     @Post('/login')
     async login(@Req() req, @Body() payload: UserLoginRequest) {
-        const userDetails = await loginUser(payload);
+        const { userDetails, secretFor2FA } = await loginUser(payload);
         await regenerateSession(req.session);
-        req.session.user = userDetails;
-        return { ...userDetails, csrfToken: req.csrfToken() };
+        const enabled2FA = secretFor2FA !== null;
+        req.session.user = { ...userDetails, enabled2FA, validated2FA: !enabled2FA, secretFor2FA };
+        return {
+            ...userDetails,
+            csrfToken: req.csrfToken(),
+            shouldValidate2FA: enabled2FA,
+        };
     }
 
     @UseBefore(authenticationMiddleware)
@@ -84,5 +94,39 @@ export class UserController {
         await regenerateSession(req.session);
         req.session.user = getUUIDV4();
         return req.csrfToken();
+    }
+
+    @UseBefore(authenticationMiddleware)
+    @UseBefore(csrfMiddleware)
+    @Post('/getTrialQRCodeSecret')
+    async getTrialQRCodeSecret(@Req() req) {
+        console.log('before service');
+        const response = await getTrialQRCode(req.session.user.email);
+        return response;
+    }
+
+    @UseBefore(authenticationMiddleware)
+    @UseBefore(csrfMiddleware)
+    @Post('/enable2FA')
+    async enable2FA(@Req() req, @Body() payload: Enable2FARequest) {
+        await enable2FA(req.session.user.id, payload);
+        return null;
+    }
+
+    @UseBefore(authenticationMiddleware)
+    @UseBefore(csrfMiddleware)
+    @Delete('/disable2FA')
+    async disable2FA(@Req() req) {
+        await disable2FA(req.session.user.id);
+        return null;
+    }
+
+    @UseBefore(csrfMiddleware)
+    @Post('/validate2FAToken')
+    async validate2FAToken(@Req() req, @Body() payload: { token: string }) {
+        console.log(req.session.user.secretFor2FA);
+        validate2FAToken(req.session.user.secretFor2FA, payload.token);
+        req.session.user.validated2FA = true;
+        return null;
     }
 }
