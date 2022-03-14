@@ -100,7 +100,6 @@ export class UserController {
     @UseBefore(csrfMiddleware)
     @Post('/getTrialQRCodeSecret')
     async getTrialQRCodeSecret(@Req() req) {
-        console.log('before service');
         const response = await getTrialQRCode(req.session.user.email);
         return response;
     }
