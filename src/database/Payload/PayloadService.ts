@@ -13,36 +13,41 @@ import {
     PayloadToProcessDTO,
 } from '@/types/models/index.js';
 import { DecryptPayloadDTOResponse } from '@/types/payloads/responses/DecryptPayloadDTOResponse.js';
+import { NotFoundError } from 'routing-controllers';
 
 const payloadRepository = app.payloadRepository;
 const chunkRepository = app.chunkRepository;
 const dataSupplierRepository = app.dataSupplierRepository;
 
-export async function createPayload(payloadDTO: PayloadDTO) {
-    const dataSupplier = await dataSupplierRepository.findById(payloadDTO.userId);
-    const payload = new Payload(
-        payloadDTO.label,
-        payloadDTO.jsonSchema,
-        dataSupplier,
-        payloadDTO.publicKey,
-        payloadDTO.galoisKeys,
-        payloadDTO.relinKeys
-    );
-    const savedPayload = await payloadRepository.save(payload);
+export async function createPayload(userId: User['id'], payloadDTO: PayloadDTO) {
+    const dataSupplier = await dataSupplierRepository.findById(userId);
+    if (dataSupplier) {
+        const payload = new Payload(
+            payloadDTO.label,
+            payloadDTO.jsonSchema,
+            dataSupplier,
+            payloadDTO.publicKey,
+            payloadDTO.galoisKeys,
+            payloadDTO.relinKeys
+        );
+        const savedPayload = await payloadRepository.save(payload);
 
-    const chunks = payloadDTO.chunks.map((chunk) => new Chunk(savedPayload, chunk.length));
-    const savedChunks = await chunkRepository.save(chunks);
-    savedChunks.forEach((chunk, index) => {
-        const inputPath = resolve(INPUT_SAVE_PATH, `${chunk.id}`);
-        const bytes = payloadDTO.chunks[index].cipherText;
-        appendFileSync(inputPath, JSON.stringify(bytes));
-        chunk.inputPath = inputPath;
-    });
-    chunkRepository.save(savedChunks);
+        const chunks = payloadDTO.chunks.map((chunk) => new Chunk(savedPayload, chunk.length));
+        const savedChunks = await chunkRepository.save(chunks);
+        savedChunks.forEach((chunk, index) => {
+            const inputPath = resolve(INPUT_SAVE_PATH, `${chunk.id}`);
+            const bytes = payloadDTO.chunks[index].cipherText;
+            appendFileSync(inputPath, JSON.stringify(bytes));
+            chunk.inputPath = inputPath;
+        });
+        chunkRepository.save(savedChunks);
 
-    savedPayload.chunks = savedChunks;
+        savedPayload.chunks = savedChunks;
 
-    await payloadRepository.save(savedPayload);
+        await payloadRepository.save(savedPayload);
+    } else {
+        throw new NotFoundError('User for which to create payload not found');
+    }
 }
 
 export async function getPayloadsForUser(userId: User['id']) {

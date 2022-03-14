@@ -21,6 +21,11 @@ export class User {
     })
     salt: string;
 
+    @Column('text', {
+        nullable: true,
+    })
+    otpSecret: string;
+
     @Column()
     role: Role;
 

@@ -3,17 +3,15 @@ import {
     UserFinishRequest,
     UserLoginRequest,
 } from '@/types/payloads/requests/index.js';
-import { Body, Controller, Get, Param, Post, UseAfter, Req, UseBefore } from 'routing-controllers';
+import { Body, Controller, Get, Post, UseAfter, Req, UseBefore } from 'routing-controllers';
 import {
     createUser,
     finishUserAccount,
     loginUser,
     sendAccountConfirmationEmail,
-    validateResourceBelongsToSessionUser,
 } from './UserService.js';
 import { getApiKeysForUser } from '../APIKey/APIKeyService.js';
 import { getPayloadsForUser } from '../Payload/PayloadService.js';
-import { User } from './User.js';
 import { authenticationMiddleware, loggingMiddleware, csrfMiddleware } from '@/middleware/index.js';
 import { getUUIDV4, regenerateSession } from '@/utils/helper.js';
 
@@ -66,18 +64,16 @@ export class UserController {
     }
 
     @UseBefore(authenticationMiddleware)
-    @Get('/:id/apiKeys')
-    async getApiKeysForUser(@Req() req, @Param('id') id: User['id']) {
-        validateResourceBelongsToSessionUser(req.session.user.id, id);
-        const apiKeys = await getApiKeysForUser(id);
+    @Get('/apiKeys')
+    async getApiKeysForUser(@Req() req) {
+        const apiKeys = await getApiKeysForUser(req.session.user.id);
         return apiKeys;
     }
 
     @UseBefore(authenticationMiddleware)
-    @Get('/:id/payloads')
-    async getPayloadsForUser(@Req() req, @Param('id') id: User['id']) {
-        validateResourceBelongsToSessionUser(req.session.user.id, id);
-        const payloads = await getPayloadsForUser(id);
+    @Get('/payloads')
+    async getPayloadsForUser(@Req() req) {
+        const payloads = await getPayloadsForUser(req.session.user.id);
         return payloads;
     }
 
