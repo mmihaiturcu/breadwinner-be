@@ -6,7 +6,10 @@ import { APIKey } from './APIKey.js';
 @EntityRepository(APIKey)
 export class APIKeyRepository extends Repository<APIKey> {
     findByHash(hash: APIKey['hash']) {
-        return this.findOne({ hash });
+        return this.findOne(
+            { hash },
+            { relations: ['dataProcessor'], select: ['id', 'hostname', 'dataProcessor'] }
+        );
     }
     async getApiKeysByUserId(userId: User['id']): Promise<ApiKeyDto[]> {
         return await this.find({

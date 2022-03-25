@@ -10,7 +10,7 @@ import {
 } from 'routing-controllers';
 import { UserController } from '@/database/User/UserController.js';
 import { APIKeyController } from '@/database/APIKey/APIKeyController.js';
-import { WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import { checkAPIKeyValid } from '@/database/APIKey/APIKeyService.js';
 import { ConfirmationController } from './database/Confirmation/ConfirmationController.js';
 import { PayloadController } from './database/Payload/PayloadController.js';
@@ -23,8 +23,9 @@ import { WebsocketEventTypes } from './types/enums/WebsocketEventTypes.js';
 import { ChunkProcessedEventData } from './types/models/ChunkProcessedEventData.js';
 import { ChunkController } from './database/Chunk/ChunkController.js';
 import { ErrorRequestHandler } from 'express';
-import { cleanDirectory } from './utils/helper.js';
+import { cleanDirectory, getUUIDV4 } from './utils/helper.js';
 import { createDefaultUsers } from './database/User/UserService.js';
+import { WebsocketSessionState } from './types/models/WebsocketSessionState.js';
 
 useExpressServer(app.expressApp, {
     controllers: [
@@ -65,6 +66,12 @@ if (process.env.npm_config_SYNC !== undefined) {
 
 const wss = new WebSocketServer({ noServer: true });
 
+/**
+ * Map which stores randomly generated payload submission tokens for WebSocket instances.
+ * A WebSocket instance is given the token when REQUEST_CHUNK is called, and must provide it in order to properly submit it when sending a SEND_CHUNK_PROCESSING_RESULT type message.
+ */
+const socketMap = new Map<WebSocket, WebsocketSessionState>();
+
 // #DISSERTATION https://www.freecodecamp.org/news/best-practices-for-building-api-keys-97c26eabfea9/
 // req.headers.origin - get the hostname of the user signing up for an API key.
 // Needs to be unique, random and non-guessable. API keys that are generated must also use Alphanumeric and special characters.
@@ -80,7 +87,9 @@ wss.on('connection', function connection(ws) {
                 const processingPayload = await getProcessingPayload();
 
                 if (processingPayload) {
-                    ws.send(JSON.stringify(processingPayload));
+                    const payloadToken = getUUIDV4();
+                    socketMap.get(ws).payloadToken = payloadToken;
+                    ws.send(JSON.stringify({ payload: processingPayload, token: payloadToken }));
                 } else {
                     ws.send('');
                 }
@@ -88,7 +97,10 @@ wss.on('connection', function connection(ws) {
             }
             case WebsocketEventTypes.SEND_CHUNK_PROCESSING_RESULT: {
                 const data = message.data as ChunkProcessedEventData;
-                await saveChunkProcessingResult(data);
+                const socketState = socketMap.get(ws);
+                if (data.token === socketState.payloadToken) {
+                    await saveChunkProcessingResult(socketState.dataProcessor, data);
+                }
             }
         }
     });
@@ -102,15 +114,23 @@ httpsServer.on('upgrade', async function upgrade(request, socket, head) {
             throw new NotFoundError('Received invalid API key');
         }
 
-        await checkAPIKeyValid(
+        const existingApiKey = await checkAPIKeyValid(
             apiKey as string,
             request.headers.host.substring(0, request.headers.host.indexOf(':'))
         );
 
+        console.log(existingApiKey);
+
         wss.handleUpgrade(request, socket, head, function done(ws) {
+            socketMap.set(ws, {
+                apiKey,
+                dataProcessor: existingApiKey.dataProcessor,
+                payloadToken: '',
+            });
             wss.emit('connection', ws, request);
         });
     } catch (error) {
+        console.log(error);
         if (error instanceof NotFoundError) {
             socket.write(error.message);
         }

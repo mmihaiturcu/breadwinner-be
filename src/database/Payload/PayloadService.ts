@@ -14,10 +14,12 @@ import {
 } from '@/types/models/index.js';
 import { DecryptPayloadDTOResponse } from '@/types/payloads/responses/DecryptPayloadDTOResponse.js';
 import { NotFoundError } from 'routing-controllers';
+import { DataProcessor } from '../DataProcessor/DataProcessor.js';
 
 const payloadRepository = app.payloadRepository;
 const chunkRepository = app.chunkRepository;
 const dataSupplierRepository = app.dataSupplierRepository;
+const dataProcessorRepository = app.dataProcessorRepository;
 
 export async function createPayload(userId: User['id'], payloadDTO: PayloadDTO) {
     const dataSupplier = await dataSupplierRepository.findById(userId);
@@ -92,14 +94,20 @@ export async function getProcessingPayload(): Promise<PayloadToProcessDTO> {
     }
 }
 
-export async function saveChunkProcessingResult(data: ChunkProcessedEventData) {
+export async function saveChunkProcessingResult(
+    dataProcessor: DataProcessor,
+    data: ChunkProcessedEventData
+) {
     const chunk = await chunkRepository.findById(data.chunkId);
+    if (!chunk.processed) {
+        chunk.dataProcessor = dataProcessor;
 
-    const outputPath = resolve(OUTPUT_SAVE_PATH, `${chunk.id}`);
-    appendFileSync(outputPath, data.result);
-    chunk.outputPath = outputPath;
-    chunk.processed = true;
-    await chunkRepository.save(chunk);
+        const outputPath = resolve(OUTPUT_SAVE_PATH, `${chunk.id}`);
+        appendFileSync(outputPath, data.result);
+        chunk.outputPath = outputPath;
+        chunk.processed = true;
+        await chunkRepository.save(chunk);
+    }
 }
 
 export async function getDecryptInfoForPayload(

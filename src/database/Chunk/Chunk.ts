@@ -1,5 +1,5 @@
-import { Payload } from '@/database/models/index.js';
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { DataProcessor, Payload } from '@/database/models/index.js';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class Chunk {
@@ -20,6 +20,10 @@ export class Chunk {
 
     @Column()
     processed: boolean;
+
+    @ManyToOne(() => DataProcessor)
+    @JoinColumn()
+    dataProcessor: DataProcessor;
 
     constructor(payload: Chunk['payload'], length: Chunk['length']) {
         this.payload = payload;
