@@ -24,11 +24,11 @@ export async function createAPIKey(
     return { apiKey: await apiKeyRepository.save(apiKey), apiKeyString };
 }
 
-export async function checkAPIKeyValid(apiKey: string, hostname: string): Promise<boolean> {
+export async function checkAPIKeyValid(apiKey: string, hostname: string): Promise<APIKey> {
     const existingApiKey = await apiKeyRepository.findByHash(generateSHA512(apiKey));
     if (existingApiKey) {
         if (existingApiKey.hostname === hostname) {
-            return true;
+            return existingApiKey;
         } else {
             throw new NotFoundError('API Key not found or not matching hostname.');
         }
