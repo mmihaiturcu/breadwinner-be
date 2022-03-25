@@ -1,4 +1,4 @@
-import { DB_PORT, FRONTEND_URL } from '@/utils/constants.js';
+import { DB_PORT, FRONTEND_URL, STRIPE_SECRET_KEY } from '@/utils/constants.js';
 import {
     APIKey,
     User,
@@ -22,6 +22,7 @@ import { ChunkRepository } from '@/database/Chunk/ChunkRepository.js';
 import { FileResourceRepository } from '@/database/FileResource/FileResourceRepository.js';
 import strictTransportSecurity from 'strict-transport-security';
 import { sessionMiddleware } from '@/middleware/index.js';
+import Stripe from 'stripe';
 
 class App {
     public static app: App;
@@ -35,6 +36,7 @@ class App {
     public payloadRepository: PayloadRepository;
     public chunkRepository: ChunkRepository;
     public fileResourceRepository: FileResourceRepository;
+    public stripe: Stripe;
 
     private constructor() {
         //
@@ -43,7 +45,14 @@ class App {
     private static configureExpressApp(): void {
         this.app.expressApp.use(sessionMiddleware);
         this.app.expressApp.use(express.urlencoded({ extended: true }));
-        this.app.expressApp.use(express.json({ limit: '100mb' })); // To parse the incoming requests with JSON payloads
+        // Use JSON parser for all non-webhook routes
+        this.app.expressApp.use((req, res, next) => {
+            if (req.originalUrl === '/payment/webhook') {
+                next();
+            } else {
+                express.json({ limit: '100mb' })(req, res, next); // To parse the incoming requests with JSON payloads
+            }
+        });
         this.app.expressApp.use(
             cors({
                 origin: FRONTEND_URL,
@@ -55,7 +64,7 @@ class App {
     }
 
     private static async configureDB(): Promise<Connection> {
-        await createConnection({
+        const connection = await createConnection({
             type: 'postgres',
             host: 'localhost',
             port: DB_PORT,
@@ -85,7 +94,7 @@ class App {
         this.app.payloadRepository = getCustomRepository(PayloadRepository);
         this.app.chunkRepository = getCustomRepository(ChunkRepository);
         this.app.fileResourceRepository = getCustomRepository(FileResourceRepository);
-        return;
+        return connection;
     }
 
     public static async getAppInstance(): Promise<App> {
@@ -94,6 +103,9 @@ class App {
             this.app.expressApp = express();
             this.configureExpressApp();
             this.app.db = await this.configureDB();
+            this.app.stripe = new Stripe(STRIPE_SECRET_KEY, {
+                apiVersion: '2020-08-27',
+            });
         }
 
         return this.app;
