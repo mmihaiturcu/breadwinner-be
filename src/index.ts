@@ -26,7 +26,7 @@ import { ErrorRequestHandler, raw } from 'express';
 import { cleanDirectory, getUUIDV4 } from './utils/helper.js';
 import { createDefaultUsers } from './database/User/UserService.js';
 import { WebsocketSessionState } from './types/models/WebsocketSessionState.js';
-import { handleWebhookEvent } from './database/Payment/PaymentController.js';
+import { handleWebhookEvent, PaymentController } from './database/Payment/PaymentController.js';
 
 useExpressServer(app.expressApp, {
     controllers: [
@@ -35,6 +35,7 @@ useExpressServer(app.expressApp, {
         ConfirmationController,
         PayloadController,
         ChunkController,
+        PaymentController,
     ],
     defaultErrorHandler: false,
 });
@@ -121,8 +122,6 @@ httpsServer.on('upgrade', async function upgrade(request, socket, head) {
             apiKey as string,
             request.headers.host.substring(0, request.headers.host.indexOf(':'))
         );
-
-        console.log(existingApiKey);
 
         wss.handleUpgrade(request, socket, head, function done(ws) {
             socketMap.set(ws, {

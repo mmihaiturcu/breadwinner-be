@@ -1,5 +1,6 @@
 import { DB_PORT, FRONTEND_URL, STRIPE_SECRET_KEY } from '@/utils/constants.js';
 import {
+    Payment,
     APIKey,
     User,
     Chunk,
@@ -23,6 +24,7 @@ import { FileResourceRepository } from '@/database/FileResource/FileResourceRepo
 import strictTransportSecurity from 'strict-transport-security';
 import { sessionMiddleware } from '@/middleware/index.js';
 import Stripe from 'stripe';
+import { PaymentRepository } from '@/database/Payment/PaymentRepository.js';
 
 class App {
     public static app: App;
@@ -36,6 +38,7 @@ class App {
     public payloadRepository: PayloadRepository;
     public chunkRepository: ChunkRepository;
     public fileResourceRepository: FileResourceRepository;
+    public paymentRepository: PaymentRepository;
     public stripe: Stripe;
 
     private constructor() {
@@ -72,6 +75,7 @@ class App {
             password: 'xo9Lw0y50DV06j7QSJ4A',
             database: 'breadwinner',
             entities: [
+                Payment,
                 APIKey,
                 User,
                 Chunk,
@@ -94,6 +98,7 @@ class App {
         this.app.payloadRepository = getCustomRepository(PayloadRepository);
         this.app.chunkRepository = getCustomRepository(ChunkRepository);
         this.app.fileResourceRepository = getCustomRepository(FileResourceRepository);
+        this.app.paymentRepository = getCustomRepository(PaymentRepository);
         return connection;
     }
 

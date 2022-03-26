@@ -3,6 +3,6 @@ export function loggingMiddleware(
     response: Express.Response,
     next?: (err?: any) => any
 ): any {
-    console.log(response);
+    // console.log(response);
     next();
 }

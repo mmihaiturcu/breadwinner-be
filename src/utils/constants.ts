@@ -26,3 +26,10 @@ export const USER_ROLE_TO_STRING = {
     [Role.DATA_SUPPLIER]: 'Data supplier',
     [Role.DATA_PROCESSOR]: 'Data processor',
 };
+
+export const DATA_PROCESSING_PRODUCT_STRIPE_ID = 'prod_LOPQsPEz1lfqCR';
+
+// Prices in $
+export const PRICE_PER_CHUNK = 0.01;
+export const PRICE_PER_OPERATION = 0.005;
+export const MIN_PAYLOAD_PRICE = 0.5;
