@@ -3,7 +3,6 @@ import app from '@/config/App.js';
 import { unlink } from 'fs';
 import { resolve } from 'path';
 import { INPUT_SAVE_PATH, OUTPUT_SAVE_PATH } from '@/utils/constants.js';
-import { Payment } from '@/database/models/index.js';
 import { doNothing } from '@/utils/helper.js';
 import Stripe from 'stripe';
 

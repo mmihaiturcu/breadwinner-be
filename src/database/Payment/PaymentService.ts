@@ -24,7 +24,7 @@ export async function createPaymentForUnattachedPayloads(
             PRICE_PER_CHUNK * payload.noChunks +
             PRICE_PER_OPERATION * payload.jsonSchema.operations.length * payload.noChunks;
     }
-    const stringPrice = Number(Math.max(MIN_PAYLOAD_PRICE, price).toFixed(2)) * 100;
+    const stringPrice = Math.floor(Number(Math.max(MIN_PAYLOAD_PRICE, price).toPrecision(2)) * 100);
 
     console.log('string price is', stringPrice);
 

@@ -1,4 +1,4 @@
-import { User } from '@/database/models/index.js';
+import { Chunk, User } from '@/database/models/index.js';
 import { APIKey } from '../APIKey/APIKey.js';
 import {
     BeforeInsert,
@@ -21,6 +21,9 @@ export class DataProcessor {
 
     @OneToMany(() => APIKey, (apiKey) => apiKey.dataProcessor)
     apiKeys: APIKey[];
+
+    @OneToMany(() => Chunk, (chunk) => chunk.dataProcessor)
+    chunks: Chunk[];
 
     @Column()
     activatedStripeAccount: boolean;

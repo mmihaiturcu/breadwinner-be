@@ -236,16 +236,21 @@ export async function getConnectedStripeAccountLink(userId: User['id']) {
             metadata: {
                 id: String(userId),
             },
+            country: 'US',
         });
         dataProcessor.connectedStripeAccountID = account.id;
         await dataProcessorRepository.save(dataProcessor);
     }
-
-    const accountLink = await app.stripe.accountLinks.create({
-        account: dataProcessor.connectedStripeAccountID,
-        refresh_url: FRONTEND_URL,
-        return_url: FRONTEND_URL,
-        type: dataProcessor.activatedStripeAccount ? 'account_update' : 'account_onboarding',
-    });
-    return accountLink.url;
+    try {
+        const accountLink = await app.stripe.accountLinks.create({
+            account: dataProcessor.connectedStripeAccountID,
+            refresh_url: FRONTEND_URL,
+            return_url: FRONTEND_URL,
+            // type: dataProcessor.activatedStripeAccount ? 'account_update' : 'account_onboarding',
+            type: 'account_onboarding',
+        });
+        return accountLink.url;
+    } catch (err) {
+        console.log(err);
+    }
 }

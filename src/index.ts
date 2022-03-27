@@ -28,6 +28,7 @@ import { createDefaultUsers } from './database/User/UserService.js';
 import { WebsocketSessionState } from './types/models/WebsocketSessionState.js';
 import { handleWebhookEvent, PaymentController } from './database/Payment/PaymentController.js';
 import '@/tasks/deletePendingPayloads.js';
+import '@/tasks/payForProcessedChunks.js';
 
 useExpressServer(app.expressApp, {
     controllers: [
