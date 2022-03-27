@@ -22,10 +22,13 @@ import { WebsocketEvent } from './types/models/WebsocketEvent.js';
 import { WebsocketEventTypes } from './types/enums/WebsocketEventTypes.js';
 import { ChunkProcessedEventData } from './types/models/ChunkProcessedEventData.js';
 import { ChunkController } from './database/Chunk/ChunkController.js';
-import { ErrorRequestHandler } from 'express';
+import { ErrorRequestHandler, raw } from 'express';
 import { cleanDirectory, getUUIDV4 } from './utils/helper.js';
 import { createDefaultUsers } from './database/User/UserService.js';
 import { WebsocketSessionState } from './types/models/WebsocketSessionState.js';
+import { handleWebhookEvent, PaymentController } from './database/Payment/PaymentController.js';
+import '@/tasks/deletePendingPayloads.js';
+import '@/tasks/payForProcessedChunks.js';
 
 useExpressServer(app.expressApp, {
     controllers: [
@@ -34,6 +37,7 @@ useExpressServer(app.expressApp, {
         ConfirmationController,
         PayloadController,
         ChunkController,
+        PaymentController,
     ],
     defaultErrorHandler: false,
 });
@@ -45,6 +49,8 @@ app.expressApp.use(function (error, req, res, next) {
         res.status(500).send(new InternalServerError('Unhandled error'));
     }
 } as ErrorRequestHandler);
+
+app.expressApp.post('/payment/webhook', raw({ type: 'application/json' }), handleWebhookEvent);
 
 const httpsServer = https.createServer(
     {
@@ -118,8 +124,6 @@ httpsServer.on('upgrade', async function upgrade(request, socket, head) {
             apiKey as string,
             request.headers.host.substring(0, request.headers.host.indexOf(':'))
         );
-
-        console.log(existingApiKey);
 
         wss.handleUpgrade(request, socket, head, function done(ws) {
             socketMap.set(ws, {

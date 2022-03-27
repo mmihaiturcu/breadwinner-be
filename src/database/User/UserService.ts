@@ -226,3 +226,31 @@ export function validate2FAToken(secret: User['otpSecret'], token: string) {
         throw new UnauthorizedError('2FA Token is invalid.');
     }
 }
+
+export async function getConnectedStripeAccountLink(userId: User['id']) {
+    const dataProcessor = await dataProcessorRepository.findById(userId);
+
+    if (!dataProcessor.connectedStripeAccountID) {
+        const account = await app.stripe.accounts.create({
+            type: 'express',
+            metadata: {
+                id: String(userId),
+            },
+            country: 'US',
+        });
+        dataProcessor.connectedStripeAccountID = account.id;
+        await dataProcessorRepository.save(dataProcessor);
+    }
+    try {
+        const accountLink = await app.stripe.accountLinks.create({
+            account: dataProcessor.connectedStripeAccountID,
+            refresh_url: FRONTEND_URL,
+            return_url: FRONTEND_URL,
+            // type: dataProcessor.activatedStripeAccount ? 'account_update' : 'account_onboarding',
+            type: 'account_onboarding',
+        });
+        return accountLink.url;
+    } catch (err) {
+        console.log(err);
+    }
+}

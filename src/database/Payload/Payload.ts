@@ -1,6 +1,7 @@
 import { Chunk, DataSupplier } from '@/database/models/index.js';
+import { Payment } from '../Payment/Payment.js';
 import { JSONSchema } from '@/types/models';
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 /**
  * Dataset which a DataSupplier uploads, which is to be processed in a specific way as indicated by its associated JSONSchema.
@@ -31,6 +32,10 @@ export class Payload {
 
     @OneToMany(() => Chunk, (chunk) => chunk.payload)
     chunks: Chunk[];
+
+    @ManyToOne(() => Payment, { nullable: true, onDelete: 'CASCADE' })
+    @JoinColumn()
+    payment: Payment;
 
     constructor(
         label: string,

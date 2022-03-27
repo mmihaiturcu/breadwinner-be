@@ -10,6 +10,7 @@ import {
     disable2FA,
     enable2FA,
     finishUserAccount,
+    getConnectedStripeAccountLink,
     getTrialQRCode,
     loginUser,
     sendAccountConfirmationEmail,
@@ -127,5 +128,12 @@ export class UserController {
         validate2FAToken(req.session.user.secretFor2FA, payload.token);
         req.session.user.validated2FA = true;
         return null;
+    }
+
+    @UseBefore(authenticationMiddleware)
+    @UseBefore(csrfMiddleware)
+    @Post('/getConnectedStripeAccountLink')
+    async getConnectedStripeAccountLink(@Req() req) {
+        return await getConnectedStripeAccountLink(req.session.user.id);
     }
 }
