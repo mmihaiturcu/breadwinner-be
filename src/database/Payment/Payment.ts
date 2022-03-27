@@ -1,6 +1,15 @@
 import { PaymentStates } from '@/types/enums/index.js';
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+    Column,
+    CreateDateColumn,
+    Entity,
+    JoinColumn,
+    ManyToOne,
+    OneToMany,
+    PrimaryGeneratedColumn,
+} from 'typeorm';
 import { DataSupplier } from '../DataSupplier/DataSupplier.js';
+import { Payload } from '../Payload/Payload.js';
 
 @Entity()
 export class Payment {
@@ -11,6 +20,9 @@ export class Payment {
     @JoinColumn()
     dataSupplier: DataSupplier;
 
+    @OneToMany(() => Payload, (payload) => payload.payment)
+    payloads: Payload[];
+
     @Column()
     stripeSessionID: string;
 
@@ -19,6 +31,9 @@ export class Payment {
 
     @Column()
     paymentState: PaymentStates;
+
+    @CreateDateColumn()
+    createdAt: Date;
 
     constructor(dataSupplier: DataSupplier, stripeSessionID: string, checkoutURL: string) {
         this.dataSupplier = dataSupplier;

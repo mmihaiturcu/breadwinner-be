@@ -33,7 +33,7 @@ export class Payload {
     @OneToMany(() => Chunk, (chunk) => chunk.payload)
     chunks: Chunk[];
 
-    @ManyToOne(() => Payment, { nullable: true })
+    @ManyToOne(() => Payment, { nullable: true, onDelete: 'CASCADE' })
     @JoinColumn()
     payment: Payment;
 

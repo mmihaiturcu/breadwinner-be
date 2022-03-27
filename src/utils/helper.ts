@@ -43,3 +43,7 @@ export function cleanDirectory(directoryPath: string) {
         unlinkSync(join(directoryPath, filePath));
     }
 }
+
+export function doNothing() {
+    return;
+}

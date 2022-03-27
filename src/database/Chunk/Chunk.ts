@@ -6,7 +6,7 @@ export class Chunk {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToOne(() => Payload)
+    @ManyToOne(() => Payload, { onDelete: 'CASCADE' })
     payload: Payload;
 
     @Column()

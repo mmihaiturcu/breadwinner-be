@@ -19,7 +19,6 @@ import { DataProcessor } from '../DataProcessor/DataProcessor.js';
 const payloadRepository = app.payloadRepository;
 const chunkRepository = app.chunkRepository;
 const dataSupplierRepository = app.dataSupplierRepository;
-const dataProcessorRepository = app.dataProcessorRepository;
 
 export async function createPayload(userId: User['id'], payloadDTO: PayloadDTO) {
     const dataSupplier = await dataSupplierRepository.findById(userId);

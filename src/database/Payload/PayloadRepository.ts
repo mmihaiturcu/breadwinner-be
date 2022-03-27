@@ -1,8 +1,9 @@
 import { UnattachedPayload } from '@/types/models/index.js';
 import { EntityRepository, In, Repository } from 'typeorm';
-import { User, DataSupplier } from '../models/index.js';
+import { User, DataSupplier, Chunk } from '../models/index.js';
 import { Payload } from './Payload.js';
 import { Payment } from '../Payment/Payment.js';
+import { PaymentStates } from '@/types/enums/PaymentStates.js';
 
 @EntityRepository(Payload)
 export class PayloadRepository extends Repository<Payload> {
