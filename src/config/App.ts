@@ -6,7 +6,6 @@ import {
     Chunk,
     DataProcessor,
     DataSupplier,
-    FileResource,
     Payload,
     Confirmation,
 } from '@/database/models/index.js';
@@ -20,7 +19,6 @@ import { DataSupplierRepository } from '@/database/DataSupplier/DataSupplierRepo
 import { ConfirmationRepository } from '@/database/Confirmation/ConfirmationRepository.js';
 import { PayloadRepository } from '@/database/Payload/PayloadRepository.js';
 import { ChunkRepository } from '@/database/Chunk/ChunkRepository.js';
-import { FileResourceRepository } from '@/database/FileResource/FileResourceRepository.js';
 import strictTransportSecurity from 'strict-transport-security';
 import { sessionMiddleware } from '@/middleware/index.js';
 import Stripe from 'stripe';
@@ -37,7 +35,6 @@ class App {
     public dataSupplierRepository: DataSupplierRepository;
     public payloadRepository: PayloadRepository;
     public chunkRepository: ChunkRepository;
-    public fileResourceRepository: FileResourceRepository;
     public paymentRepository: PaymentRepository;
     public stripe: Stripe;
 
@@ -81,7 +78,6 @@ class App {
                 Chunk,
                 DataProcessor,
                 DataSupplier,
-                FileResource,
                 Payload,
                 Confirmation,
             ],
@@ -97,7 +93,6 @@ class App {
         this.app.dataSupplierRepository = getCustomRepository(DataSupplierRepository);
         this.app.payloadRepository = getCustomRepository(PayloadRepository);
         this.app.chunkRepository = getCustomRepository(ChunkRepository);
-        this.app.fileResourceRepository = getCustomRepository(FileResourceRepository);
         this.app.paymentRepository = getCustomRepository(PaymentRepository);
         return connection;
     }
