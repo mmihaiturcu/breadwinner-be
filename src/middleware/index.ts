@@ -1,4 +1,4 @@
-export { sessionMiddleware } from './session.js';
-export { authenticationMiddleware } from './authentication.js';
-export { loggingMiddleware } from './logging.js';
-export { csrfMiddleware } from './csrf.js';
+export { sessionMiddleware } from './session';
+export { authenticationMiddleware } from './authentication';
+export { loggingMiddleware } from './logging';
+export { csrfMiddleware } from './csrf';

@@ -1,4 +1,4 @@
-import { Chunk } from '@/database/models';
+import { Chunk } from '@/database/models/index';
 import { OperandTypes } from '@/types/enums';
 
 export interface DecryptPayloadDTOResponse {

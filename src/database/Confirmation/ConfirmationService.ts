@@ -1,14 +1,21 @@
-import app from '@/config/App.js';
+import app from '@/config/App';
 import { isBefore } from 'date-fns';
-import { HTTPGoneError, HTTPConflictError } from '@/errors/index.js';
+import { HTTPGoneError, HTTPConflictError } from '@/errors/index';
 import { NotFoundError } from 'routing-controllers';
-
-const confirmationRepository = app.confirmationRepository;
+import queryBuilder from 'dbschema/edgeql-js/index';
+const { db } = app;
 
 export async function verifyConfirmation(uuid: string) {
-    const confirmation = await confirmationRepository.findByUUID(uuid);
+    const confirmations = await queryBuilder
+        .select(queryBuilder.Confirmation, (confirmation) => ({
+            filter: queryBuilder.op(confirmation.uuid, '=', uuid),
+            wasUsed: true,
+            expiresAt: true,
+        }))
+        .run(db);
 
-    if (confirmation) {
+    if (confirmations.length) {
+        const confirmation = confirmations[0];
         if (confirmation.wasUsed) {
             throw new HTTPConflictError('The confirmation link has already been used.');
         } else if (isBefore(confirmation.expiresAt, new Date())) {

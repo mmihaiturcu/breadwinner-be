@@ -3,7 +3,7 @@ import {
     UserFinishRequest,
     UserLoginRequest,
     Enable2FARequest,
-} from '@/types/payloads/requests/index.js';
+} from '@/types/payloads/requests/index';
 import { Body, Controller, Get, Post, UseAfter, Req, UseBefore, Delete } from 'routing-controllers';
 import {
     createUser,
@@ -15,24 +15,26 @@ import {
     loginUser,
     sendAccountConfirmationEmail,
     validate2FAToken,
-} from './UserService.js';
-import { getApiKeysForUser } from '../APIKey/APIKeyService.js';
-import { getPayloadsForUser } from '../Payload/PayloadService.js';
-import { authenticationMiddleware, loggingMiddleware, csrfMiddleware } from '@/middleware/index.js';
-import { getUUIDV4, regenerateSession } from '@/utils/helper.js';
+} from './UserService';
+import { getApiKeysForUser } from '../APIKey/APIKeyService';
+import { getPayloadsForUser } from '../Payload/PayloadService';
+import { authenticationMiddleware, loggingMiddleware, csrfMiddleware } from '@/middleware/index';
+import { getUUIDV4, regenerateSession } from '@/utils/helper';
+import { Request } from 'express';
+import { Role } from '../models';
 
 @UseAfter(loggingMiddleware)
 @Controller('/user')
 export class UserController {
     @UseBefore(csrfMiddleware)
     @Get('/csrf')
-    async getCSRFToken(@Req() req) {
+    async getCSRFToken(@Req() req: Request) {
         return req.csrfToken();
     }
 
     @UseBefore(csrfMiddleware)
     @Get('/session')
-    async getSession(@Req() req) {
+    async getSession(@Req() req: Request) {
         if (req.session && req.session.user && typeof req.session.user === 'object') {
             return {
                 ...req.session.user,
@@ -40,7 +42,15 @@ export class UserController {
             };
         } else {
             await regenerateSession(req.session);
-            req.session.user = getUUIDV4();
+            req.session.user = {
+                id: getUUIDV4(),
+                email: '',
+                enabled2FA: false,
+                role: Role.DATA_SUPPLIER,
+                roleSpecificId: '',
+                validated2FA: false,
+                secretFor2FA: '',
+            };
         }
         return null;
     }
@@ -48,8 +58,8 @@ export class UserController {
     @UseBefore(csrfMiddleware)
     @Post('/create')
     async createAccount(@Body() payload: UserCreateRequest) {
-        const { user, confirmation } = await createUser(payload);
-        await sendAccountConfirmationEmail(user, confirmation);
+        const { email, role, uuid } = await createUser(payload);
+        await sendAccountConfirmationEmail(email, role, uuid);
         return null;
     }
 
@@ -62,7 +72,7 @@ export class UserController {
 
     @UseBefore(csrfMiddleware)
     @Post('/login')
-    async login(@Req() req, @Body() payload: UserLoginRequest) {
+    async login(@Req() req: Request, @Body() payload: UserLoginRequest) {
         const { userDetails, secretFor2FA } = await loginUser(payload);
         await regenerateSession(req.session);
         const enabled2FA = secretFor2FA !== null;
@@ -76,64 +86,71 @@ export class UserController {
 
     @UseBefore(authenticationMiddleware)
     @Get('/apiKeys')
-    async getApiKeysForUser(@Req() req) {
-        const apiKeys = await getApiKeysForUser(req.session.user.id);
+    async getApiKeysForUser(@Req() req: Request) {
+        const apiKeys = await getApiKeysForUser(req.session.user!.roleSpecificId);
         return apiKeys;
     }
 
     @UseBefore(authenticationMiddleware)
     @Get('/payloads')
-    async getPayloadsForUser(@Req() req) {
-        const payloads = await getPayloadsForUser(req.session.user.id);
+    async getPayloadsForUser(@Req() req: Request) {
+        const payloads = await getPayloadsForUser(req.session.user!.roleSpecificId);
         return payloads;
     }
 
     @UseBefore(authenticationMiddleware)
     @UseBefore(csrfMiddleware)
     @Post('/logout')
-    async logout(@Req() req) {
+    async logout(@Req() req: Request) {
         await regenerateSession(req.session);
-        req.session.user = getUUIDV4();
+        req.session.user = {
+            id: getUUIDV4(),
+            email: '',
+            enabled2FA: false,
+            role: Role.DATA_SUPPLIER,
+            roleSpecificId: '',
+            validated2FA: false,
+            secretFor2FA: '',
+        };
         return req.csrfToken();
     }
 
     @UseBefore(authenticationMiddleware)
     @UseBefore(csrfMiddleware)
     @Post('/getTrialQRCodeSecret')
-    async getTrialQRCodeSecret(@Req() req) {
-        const response = await getTrialQRCode(req.session.user.email);
+    async getTrialQRCodeSecret(@Req() req: Request) {
+        const response = await getTrialQRCode(req.session.user!.email);
         return response;
     }
 
     @UseBefore(authenticationMiddleware)
     @UseBefore(csrfMiddleware)
     @Post('/enable2FA')
-    async enable2FA(@Req() req, @Body() payload: Enable2FARequest) {
-        await enable2FA(req.session.user.id, payload);
+    async enable2FA(@Req() req: Request, @Body() payload: Enable2FARequest) {
+        await enable2FA(req.session.user!.id, payload);
         return null;
     }
 
     @UseBefore(authenticationMiddleware)
     @UseBefore(csrfMiddleware)
     @Delete('/disable2FA')
-    async disable2FA(@Req() req) {
-        await disable2FA(req.session.user.id);
+    async disable2FA(@Req() req: Request) {
+        await disable2FA(req.session.user!.id);
         return null;
     }
 
     @UseBefore(csrfMiddleware)
     @Post('/validate2FAToken')
-    async validate2FAToken(@Req() req, @Body() payload: { token: string }) {
-        console.log(req.session.user.secretFor2FA);
-        validate2FAToken(req.session.user.secretFor2FA, payload.token);
-        req.session.user.validated2FA = true;
+    async validate2FAToken(@Req() req: Request, @Body() payload: { token: string }) {
+        validate2FAToken(req.session.user!.secretFor2FA, payload.token);
+        req.session.user!.validated2FA = true;
         return null;
     }
 
     @UseBefore(authenticationMiddleware)
     @UseBefore(csrfMiddleware)
     @Post('/getConnectedStripeAccountLink')
-    async getConnectedStripeAccountLink(@Req() req) {
-        return await getConnectedStripeAccountLink(req.session.user.id);
+    async getConnectedStripeAccountLink(@Req() req: Request) {
+        return await getConnectedStripeAccountLink(req.session.user!.roleSpecificId);
     }
 }

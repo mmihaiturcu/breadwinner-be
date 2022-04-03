@@ -1,94 +1,93 @@
-import { getUUIDV4, hashAndSaltPasswordToHex, timingSafeEqualStrings } from '@/utils/helper.js';
+import { getUUIDV4, hashAndSaltPasswordToHex, timingSafeEqualStrings } from '@/utils/helper';
 import { addWeeks } from 'date-fns';
 import { randomBytes } from 'crypto';
-import app from '@/config/App.js';
+import app from '@/config/App';
 import {
     Enable2FARequest,
     UserCreateRequest,
     UserFinishRequest,
     UserLoginRequest,
-} from '@/types/payloads/requests/index.js';
-import { User } from './User.js';
-import { Role } from '@/types/enums/Role.js';
-import { DataSupplier } from '../DataSupplier/DataSupplier.js';
-import { DataProcessor } from '../DataProcessor/DataProcessor.js';
-import { Confirmation } from '../Confirmation/Confirmation.js';
+} from '@/types/payloads/requests/index';
 import {
     getContentWithMessageAndButton,
     getGeneralEmailTemplate,
     sendMail,
-} from '@/utils/emailService.js';
-import { FRONTEND_URL, USER_ROLE_TO_STRING } from '@/utils/constants.js';
-import {
-    BadRequestError,
-    InternalServerError,
-    NotFoundError,
-    UnauthorizedError,
-} from 'routing-controllers';
-import { UserDetails } from '@/types/payloads/responses/UserDetails.js';
-import { QueryFailedError } from 'typeorm';
-import { HTTPConflictError } from '@/errors/HTTPConflictError.js';
+} from '@/utils/emailService';
+import { FRONTEND_URL, USER_ROLE_TO_STRING } from '@/utils/constants';
+import { BadRequestError, InternalServerError, UnauthorizedError } from 'routing-controllers';
+import { UserDetails } from '@/types/payloads/responses/UserDetails';
+import { HTTPConflictError } from '@/errors/HTTPConflictError';
 import { authenticator } from 'otplib';
 import { toDataURL } from 'qrcode';
-import { GetTrialQRCodeResponse } from '@/types/payloads/responses/GetTrialQRCodeResponse.js';
-
-const userRepository = app.userRepository;
-const confirmationRepository = app.confirmationRepository;
-const dataSupplierRepository = app.dataSupplierRepository;
-const dataProcessorRepository = app.dataProcessorRepository;
+import { GetTrialQRCodeResponse } from '@/types/payloads/responses/GetTrialQRCodeResponse';
+import { Role, User } from '../models/index';
+import queryBuilder from 'dbschema/edgeql-js/index';
+const { db } = app;
 
 export async function createUser(
     payload: UserCreateRequest
-): Promise<{ user: User; confirmation: Confirmation }> {
-    // 1. Create the User
-    const user = new User(payload.email, payload.userRole);
+): Promise<{ email: string; role: Role; uuid: string }> {
+    const uuid = getUUIDV4();
+    // 1. Create Confirmation for the user
+    const confirmation = queryBuilder.insert(queryBuilder.Confirmation, {
+        uuid,
+        expiresAt: addWeeks(new Date(), 1),
+        wasUsed: false,
+    });
+
+    const user = queryBuilder.insert(queryBuilder.User, {
+        email: payload.email,
+        confirmation,
+        role: payload.userRole,
+    });
 
     // 2. Create either a DataSupplier or DataProcessor
     try {
         switch (payload.userRole) {
             case Role.DATA_SUPPLIER: {
-                await dataSupplierRepository.save(new DataSupplier(user));
+                const query = queryBuilder.insert(queryBuilder.DataSupplier, {
+                    userDetails: user,
+                });
+                await query.run(db);
                 break;
             }
             case Role.DATA_PROCESSOR: {
-                await dataProcessorRepository.save(new DataProcessor(user));
+                const query = queryBuilder.insert(queryBuilder.DataProcessor, {
+                    userDetails: user,
+                    activatedStripeAccount: false,
+                });
+                await query.run(db);
                 break;
             }
         }
     } catch (error) {
+        console.log(error);
         // 2.1 Handle the case in which another user with the same email exists.
-        if (error instanceof QueryFailedError) {
-            throw new HTTPConflictError('A user with the specified email address already exists.');
-        }
+        throw new HTTPConflictError('A user with the specified email address already exists.');
     }
 
-    // 3. Create Confirmation for the user
-    const confirmation = new Confirmation(getUUIDV4(), addWeeks(new Date(), 1), user);
-    await confirmationRepository.save(confirmation);
-
     return {
-        user,
-        confirmation,
+        email: payload.email,
+        role: payload.userRole,
+        uuid,
     };
 }
 
-export async function sendAccountConfirmationEmail(user: User, confirmation: Confirmation) {
+export async function sendAccountConfirmationEmail(email: string, role: Role, uuid: string) {
     await sendMail({
-        to: user.email,
+        to: email,
         subject: 'Your Breadwinner account confirmation link awaits!',
         html: getGeneralEmailTemplate(
             'Your Breadwinner account confirmation link awaits!',
             getContentWithMessageAndButton(
                 [
-                    `Thank you for signing up for a Breadwinner ${
-                        USER_ROLE_TO_STRING[user.role]
-                    } account!`,
+                    `Thank you for signing up for a Breadwinner ${USER_ROLE_TO_STRING[role]} account!`,
                     'Please click on the button below in order to set a password.',
                 ],
                 [
                     {
                         text: 'Set password',
-                        url: `${FRONTEND_URL}/#/confirmation?uuid=${confirmation.uuid}`,
+                        url: `${FRONTEND_URL}/#/confirmation?uuid=${uuid}`,
                     },
                 ]
             )
@@ -97,46 +96,82 @@ export async function sendAccountConfirmationEmail(user: User, confirmation: Con
 }
 
 export async function finishUserAccount(payload: UserFinishRequest): Promise<void> {
-    const confirmationWithUser = await confirmationRepository.findOne({
-        relations: ['user'],
-        where: {
-            uuid: payload.confirmationUuid,
-        },
-    });
-
-    const user = confirmationWithUser.user;
-
-    if (user) {
-        const salt = randomBytes(16);
-        await userRepository.update(user.id, {
-            password: hashAndSaltPasswordToHex(payload.password, salt),
-            salt: salt.toString('hex'),
-        });
-        await confirmationRepository.update(confirmationWithUser.id, {
+    const salt = randomBytes(16);
+    const confirmation = queryBuilder.update(queryBuilder.Confirmation, (confirmation) => ({
+        filter: queryBuilder.op(confirmation.uuid, '=', payload.confirmationUuid),
+        set: {
             wasUsed: true,
-        });
-    } else {
-        throw new NotFoundError('No user matching the specified confirmation was found.');
-    }
+        },
+    }));
+
+    const query = queryBuilder.update(confirmation['<confirmation[is User]'], (c) => ({
+        set: {
+            salt: salt.toString('hex'),
+            password: hashAndSaltPasswordToHex(payload.password, salt),
+        },
+    }));
+
+    await query.run(db);
 }
 
 export async function loginUser(
     payload: UserLoginRequest
 ): Promise<{ userDetails: UserDetails; secretFor2FA: User['otpSecret'] }> {
-    const user = await userRepository.findOne({
-        email: payload.email,
-    });
+    const query = queryBuilder.select(queryBuilder.User, (user) => ({
+        filter: queryBuilder.op(user.email, '=', payload.email),
+        id: true,
+        password: true,
+        salt: true,
+        email: true,
+        role: true,
+        otpSecret: true,
+    }));
+
+    const user = await query.run(db);
 
     if (user) {
         if (
             user.password &&
+            user.salt &&
             timingSafeEqualStrings(
                 user.password,
                 hashAndSaltPasswordToHex(payload.password, Buffer.from(user.salt, 'hex'))
             )
         ) {
+            const roleSpecificDetails = await (user.role === 'DATA_PROCESSOR'
+                ? queryBuilder.select(queryBuilder.DataProcessor, (dataProcessor) => ({
+                      filter: queryBuilder.op(
+                          dataProcessor.userDetails.id,
+                          '=',
+                          queryBuilder.uuid(user.id)
+                      ),
+                      id: true,
+                  }))
+                : queryBuilder.select(queryBuilder.DataSupplier, (dataSupplier) => ({
+                      filter: queryBuilder.op(
+                          dataSupplier.userDetails.id,
+                          '=',
+                          queryBuilder.uuid(user.id)
+                      ),
+                      id: true,
+                  }))
+            ).run(db);
+
+            console.log(
+                'login',
+                'base user id',
+                user.id,
+                'specific role id',
+                roleSpecificDetails[0].id
+            );
+
             return {
-                userDetails: { id: user.id, email: user.email, role: user.role },
+                userDetails: {
+                    id: user.id,
+                    roleSpecificId: roleSpecificDetails[0].id,
+                    email: user.email,
+                    role: user.role as Role,
+                },
                 secretFor2FA: user.otpSecret,
             };
         } else {
@@ -154,7 +189,7 @@ export async function createDefaultUsers(): Promise<void> {
     });
 
     await finishUserAccount({
-        confirmationUuid: creationPayloadThalros.confirmation.uuid,
+        confirmationUuid: creationPayloadThalros.uuid,
         password: 'Pass!123',
     });
 
@@ -164,12 +199,15 @@ export async function createDefaultUsers(): Promise<void> {
     });
 
     await finishUserAccount({
-        confirmationUuid: creationPayloadMihai.confirmation.uuid,
+        confirmationUuid: creationPayloadMihai.uuid,
         password: 'Pass!123',
     });
 }
 
-export function validateResourceBelongsToSessionUser(sessionUserId, userId) {
+export function validateResourceBelongsToSessionUser(
+    sessionUserId: User['id'],
+    userId: User['id']
+) {
     const resourceBelongsToSession = sessionUserId === userId;
     if (!resourceBelongsToSession) {
         throw new UnauthorizedError(
@@ -178,7 +216,7 @@ export function validateResourceBelongsToSessionUser(sessionUserId, userId) {
     }
 }
 
-export async function getTrialQRCode(userEmail): Promise<GetTrialQRCodeResponse> {
+export async function getTrialQRCode(userEmail: User['email']): Promise<GetTrialQRCodeResponse> {
     try {
         const secret = authenticator.generateSecret();
         const otpauth = authenticator.keyuri(userEmail, 'Breadwinner', secret);
@@ -195,9 +233,13 @@ export async function enable2FA(userId: User['id'], payload: Enable2FARequest) {
         token: payload.token,
     });
     if (verified) {
-        const user = await userRepository.findById(userId);
-        user.otpSecret = payload.secret;
-        await userRepository.save(user);
+        const query = queryBuilder.update(queryBuilder.User, (user) => ({
+            filter: queryBuilder.op(user.id, '=', queryBuilder.uuid(userId)),
+            set: {
+                otpSecret: payload.secret,
+            },
+        }));
+        await query.run(db);
     } else {
         throw new BadRequestError(
             'Token is incorrect or stale, validation could not be performed.'
@@ -206,19 +248,19 @@ export async function enable2FA(userId: User['id'], payload: Enable2FARequest) {
 }
 
 export async function disable2FA(userId: User['id']) {
-    const user = await userRepository.findById(userId);
+    const query = queryBuilder.update(queryBuilder.User, (user) => ({
+        filter: queryBuilder.op(user.id, '=', queryBuilder.uuid(userId)),
+        set: {
+            otpSecret: null,
+        },
+    }));
 
-    if (user) {
-        user.otpSecret = null;
-        await userRepository.save(user);
-    } else {
-        throw new NotFoundError('User not found.');
-    }
+    await query.run(db);
 }
 
 export function validate2FAToken(secret: User['otpSecret'], token: string) {
     const validated = authenticator.verify({
-        secret,
+        secret: secret!,
         token,
     });
 
@@ -228,29 +270,45 @@ export function validate2FAToken(secret: User['otpSecret'], token: string) {
 }
 
 export async function getConnectedStripeAccountLink(userId: User['id']) {
-    const dataProcessor = await dataProcessorRepository.findById(userId);
+    const dataProcessor = await queryBuilder
+        .select(queryBuilder.DataProcessor, (dataProcessor) => ({
+            filter: queryBuilder.op(dataProcessor.id, '=', queryBuilder.uuid(userId)),
+            connectedStripeAccountID: true,
+        }))
+        .run(db);
 
-    if (!dataProcessor.connectedStripeAccountID) {
-        const account = await app.stripe.accounts.create({
-            type: 'express',
-            metadata: {
-                id: String(userId),
-            },
-            country: 'US',
-        });
-        dataProcessor.connectedStripeAccountID = account.id;
-        await dataProcessorRepository.save(dataProcessor);
-    }
-    try {
-        const accountLink = await app.stripe.accountLinks.create({
-            account: dataProcessor.connectedStripeAccountID,
-            refresh_url: FRONTEND_URL,
-            return_url: FRONTEND_URL,
-            // type: dataProcessor.activatedStripeAccount ? 'account_update' : 'account_onboarding',
-            type: 'account_onboarding',
-        });
-        return accountLink.url;
-    } catch (err) {
-        console.log(err);
+    if (dataProcessor) {
+        let connectedStripeAccountID = dataProcessor.connectedStripeAccountID;
+
+        if (!connectedStripeAccountID) {
+            const account = await app.stripe.accounts.create({
+                type: 'express',
+                metadata: {
+                    id: String(userId),
+                },
+                country: 'US',
+            });
+            connectedStripeAccountID = account.id;
+            await queryBuilder
+                .update(queryBuilder.DataProcessor, (dataProcessor) => ({
+                    filter: queryBuilder.op(dataProcessor.id, '=', queryBuilder.uuid(userId)),
+                    set: {
+                        connectedStripeAccountID,
+                    },
+                }))
+                .run(db);
+        }
+        try {
+            const accountLink = await app.stripe.accountLinks.create({
+                account: connectedStripeAccountID,
+                refresh_url: FRONTEND_URL,
+                return_url: FRONTEND_URL,
+                // type: dataProcessor.activatedStripeAccount ? 'account_update' : 'account_onboarding',
+                type: 'account_onboarding',
+            });
+            return accountLink.url;
+        } catch (err) {
+            console.log(err);
+        }
     }
 }

@@ -2,8 +2,9 @@ import forge from 'node-forge';
 import { v4 as uuidv4 } from 'uuid';
 import { scryptSync, timingSafeEqual } from 'crypto';
 import { Session } from 'express-session';
-import { readdirSync, unlinkSync } from 'fs';
+import { readdirSync, unlinkSync, writeFile, readFile } from 'fs';
 import { join } from 'path';
+import { EventEmitter } from 'events';
 
 export function generateSHA512(data: string) {
     const sha512 = forge.md.sha512.create();
@@ -46,4 +47,25 @@ export function cleanDirectory(directoryPath: string) {
 
 export function doNothing() {
     return;
+}
+
+export function writeFilePromise(
+    inputPath: string,
+    data: string | NodeJS.ArrayBufferView
+): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+        writeFile(inputPath, data, (err) => (err ? reject(err) : resolve()));
+    });
+}
+
+export function readFilePromise(inputPath: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+        readFile(
+            inputPath,
+            {
+                encoding: 'utf-8',
+            },
+            (err, data) => (err ? reject(err) : resolve(data))
+        );
+    });
 }

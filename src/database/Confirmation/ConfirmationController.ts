@@ -1,7 +1,7 @@
-import { csrfMiddleware, loggingMiddleware } from '@/middleware/index.js';
-import { CheckConfirmationLinkValidRequest } from '@/types/payloads/requests/CheckConfirmationLinkValidRequest.js';
+import { csrfMiddleware, loggingMiddleware } from '@/middleware/index';
+import { CheckConfirmationLinkValidRequest } from '@/types/payloads/requests/CheckConfirmationLinkValidRequest';
 import { Body, Controller, Post, UseAfter, UseBefore } from 'routing-controllers';
-import { verifyConfirmation } from './ConfirmationService.js';
+import { verifyConfirmation } from './ConfirmationService';
 
 @UseAfter(loggingMiddleware)
 @Controller('/confirmation')

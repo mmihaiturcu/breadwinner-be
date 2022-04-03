@@ -1,11 +1,11 @@
-import { Chunk, Payload } from '@/database/models';
+import { Chunk, Payload } from '@/database/models/index';
 import { JSONSchema } from './JSONSchema';
 
 export interface PayloadToProcess {
     id: Payload['id'];
     jsonSchema: JSONSchema;
-    publicKey: Payload['publicKey'];
-    galoisKeys: Payload['galoisKeys'];
-    relinKeys: Payload['relinKeys'];
-    chunks: Pick<Chunk, 'id' | 'length' | 'inputPath'>[];
+    publicKey: string;
+    galoisKeys: string;
+    relinKeys: string;
+    chunks: Pick<Chunk, 'id' | 'length'>[];
 }

@@ -1,2 +1,2 @@
-export { HTTPGoneError } from './HTTPGoneError.js';
-export { HTTPConflictError } from './HTTPConflictError.js';
+export { HTTPGoneError } from './HTTPGoneError';
+export { HTTPConflictError } from './HTTPConflictError';

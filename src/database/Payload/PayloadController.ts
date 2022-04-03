@@ -1,10 +1,9 @@
-import { authenticationMiddleware, csrfMiddleware, loggingMiddleware } from '@/middleware/index.js';
-import { PayloadDTO } from '@/types/models/index.js';
+import { authenticationMiddleware, csrfMiddleware, loggingMiddleware } from '@/middleware/index';
+import { PayloadDTO } from '@/types/models/index';
+import { Request } from 'express';
 import { Body, Controller, Get, Param, Post, Req, UseAfter, UseBefore } from 'routing-controllers';
-import { User } from '../User/User.js';
-import { validateResourceBelongsToSessionUser } from '../User/UserService.js';
-import { Payload } from './Payload.js';
-import { createPayload, getDecryptInfoForPayload } from './PayloadService.js';
+import { validateResourceBelongsToSessionUser } from '../User/UserService';
+import { createPayload, getDecryptInfoForPayload } from './PayloadService';
 
 @UseBefore(authenticationMiddleware)
 @UseAfter(loggingMiddleware)
@@ -12,18 +11,18 @@ import { createPayload, getDecryptInfoForPayload } from './PayloadService.js';
 export class PayloadController {
     @UseBefore(csrfMiddleware)
     @Post('/createPayload')
-    async createPayload(@Req() req, @Body() payload: PayloadDTO) {
-        await createPayload(req.session.user.id, payload);
+    async createPayload(@Req() req: Request, @Body() payload: PayloadDTO) {
+        await createPayload(req.session.user!.roleSpecificId, payload);
         return null;
     }
 
     @Get('/:userId/:id/decryptInfo')
     async getDecryptInfoForPayload(
-        @Req() req,
-        @Param('userId') userId: User['id'],
-        @Param('id') id: Payload['id']
+        @Req() req: Request,
+        @Param('userId') userId: string,
+        @Param('id') id: string
     ) {
-        validateResourceBelongsToSessionUser(req.session.user.id, userId);
+        validateResourceBelongsToSessionUser(req.session.user!.roleSpecificId, userId);
         return await getDecryptInfoForPayload(id);
     }
 }

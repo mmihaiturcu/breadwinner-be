@@ -1,4 +1,4 @@
-import { EmailAction } from '@/types/models/index.js';
+import { EmailAction } from '@/types/models/index';
 import nodeMailer, { SendMailOptions } from 'nodemailer';
 import path from 'path';
 import {
@@ -7,7 +7,7 @@ import {
     EMAIL_PASSWORD,
     EMAIL_USERNAME,
     FRONTEND_URL,
-} from './constants.js';
+} from './constants';
 
 const transporter = nodeMailer.createTransport({
     host: EMAIL_HOST,

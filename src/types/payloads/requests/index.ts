@@ -1,6 +1,6 @@
-export { UserCreateRequest } from './UserCreateRequest.js';
-export { UserFinishRequest } from './UserFinishRequest.js';
-export { UserLoginRequest } from './UserLoginRequest.js';
-export { CheckConfirmationLinkValidRequest } from './CheckConfirmationLinkValidRequest.js';
-export { CreateApiKeyRequest } from './CreateApiKeyRequest.js';
-export { Enable2FARequest } from './Enable2FARequest.js';
+export { UserCreateRequest } from './UserCreateRequest';
+export { UserFinishRequest } from './UserFinishRequest';
+export { UserLoginRequest } from './UserLoginRequest';
+export { CheckConfirmationLinkValidRequest } from './CheckConfirmationLinkValidRequest';
+export { CreateApiKeyRequest } from './CreateApiKeyRequest';
+export { Enable2FARequest } from './Enable2FARequest';
