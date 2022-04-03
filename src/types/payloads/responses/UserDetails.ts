@@ -1,7 +1,8 @@
-import { Role } from '@/types/enums';
+import { User } from '@/database/models/index';
 
 export class UserDetails {
-    id: number;
-    email: string;
-    role: Role;
+    id!: User['id'];
+    roleSpecificId!: User['id'];
+    email!: User['email'];
+    role!: User['role'];
 }

@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import { REDIS_HOST, REDIS_PORT } from '@/utils/constants.js';
+import { REDIS_HOST, REDIS_PORT } from '@/utils/constants';
 
 const client = createClient({
     legacyMode: true,

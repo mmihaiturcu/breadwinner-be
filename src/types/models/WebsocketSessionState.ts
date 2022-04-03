@@ -1,7 +1,7 @@
-import { DataProcessor } from '@/database/models';
+import { DataProcessor } from '@/database/models/index';
 
 export interface WebsocketSessionState {
     apiKey: string;
-    dataProcessor: DataProcessor;
+    dataProcessorId: DataProcessor['id'];
     payloadToken: string;
 }

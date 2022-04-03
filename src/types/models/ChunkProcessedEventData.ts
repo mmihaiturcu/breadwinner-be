@@ -1,4 +1,4 @@
-import { Chunk } from '@/database/models';
+import { Chunk } from '@/database/models/index';
 
 export interface ChunkProcessedEventData {
     chunkId: Chunk['id'];

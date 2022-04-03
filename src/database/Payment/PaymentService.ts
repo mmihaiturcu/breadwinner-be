@@ -1,76 +1,119 @@
-import App from '@/config/App.js';
+import App from '@/config/App';
+import { JSONSchema } from '@/types/models/index';
 import {
     DATA_PROCESSING_PRODUCT_STRIPE_ID,
     FRONTEND_URL,
     MIN_PAYLOAD_PRICE,
     PRICE_PER_CHUNK,
     PRICE_PER_OPERATION,
-} from '@/utils/constants.js';
-import { Payment, User, DataProcessor } from '../models/index.js';
-
-const { payloadRepository, dataSupplierRepository, stripe, paymentRepository } = App;
+} from '@/utils/constants';
+import { User, DataSupplier, PaymentState } from '../models/index';
+import queryBuilder from 'dbschema/edgeql-js/index';
+import { NotFoundError } from 'routing-controllers';
+const { db, stripe } = App;
 
 export async function createPaymentForUnattachedPayloads(
-    userId: DataProcessor['id'],
+    userId: DataSupplier['id'],
     email: User['email']
 ) {
-    // Get unattached payloads
-    const payloads = await payloadRepository.getUnattachedPayloads(userId);
+    // Get payloads without any payment attached.
+    const dataSupplier = await queryBuilder
+        .select(queryBuilder.DataSupplier, (dataSupplier) => ({
+            filter: queryBuilder.op(dataSupplier.id, '=', queryBuilder.uuid(userId)),
+            payloads: (payload) => ({
+                filter: queryBuilder.op('not', queryBuilder.op('exists', payload.payment)),
+                id: true,
+                jsonSchema: true,
+                noChunks: queryBuilder.count(payload.chunks),
+            }),
+        }))
+        .run(db);
 
-    let price = 0;
+    if (dataSupplier && dataSupplier.payloads.length) {
+        const payloads = dataSupplier.payloads;
+        let price = 0;
 
-    for (const payload of payloads) {
-        price +=
-            PRICE_PER_CHUNK * payload.noChunks +
-            PRICE_PER_OPERATION * payload.jsonSchema.operations.length * payload.noChunks;
-    }
-    const stringPrice = Math.floor(Number(Math.max(MIN_PAYLOAD_PRICE, price).toPrecision(2)) * 100);
+        for (const payload of payloads) {
+            price +=
+                PRICE_PER_CHUNK * payload.noChunks +
+                PRICE_PER_OPERATION *
+                    (JSON.parse(payload.jsonSchema) as JSONSchema).operations.length *
+                    payload.noChunks;
+        }
+        const stringPrice = Math.floor(
+            Number(Math.max(MIN_PAYLOAD_PRICE, price).toPrecision(2)) * 100
+        );
 
-    console.log('string price is', stringPrice);
+        console.log('string price is', stringPrice);
 
-    // Create stripe session
-    const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        mode: 'payment',
-        success_url: FRONTEND_URL,
-        cancel_url: FRONTEND_URL,
-        customer_email: email,
-        line_items: [
-            {
-                quantity: 1,
-                price_data: {
-                    product: DATA_PROCESSING_PRODUCT_STRIPE_ID,
-                    unit_amount: stringPrice,
-                    currency: 'usd',
+        // Create stripe session
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            mode: 'payment',
+            success_url: FRONTEND_URL,
+            cancel_url: FRONTEND_URL,
+            customer_email: email,
+            line_items: [
+                {
+                    quantity: 1,
+                    price_data: {
+                        product: DATA_PROCESSING_PRODUCT_STRIPE_ID,
+                        unit_amount: stringPrice,
+                        currency: 'usd',
+                    },
                 },
+            ],
+            metadata: {
+                payloadId: payloads[0].id,
             },
-        ],
-        metadata: {
-            payloadId: payloads[0].id,
-        },
-    });
+        });
 
-    const dataSupplier = await dataSupplierRepository.findById(userId);
+        // Create Payment
+        const payment = queryBuilder.insert(queryBuilder.Payment, {
+            stripeSessionID: session.id,
+            stripeCheckoutURL: session.url!,
+            dataSupplier: queryBuilder.select(queryBuilder.DataSupplier, (dataSupplier) => ({
+                filter: queryBuilder.op(dataSupplier.id, '=', queryBuilder.uuid(userId)),
+            })),
+            createdAt: new Date(),
+            paymentState: PaymentState.PENDING,
+        });
 
-    const payment = new Payment(dataSupplier, session.id, session.url);
+        await queryBuilder
+            .update(queryBuilder.Payload, (payload) => ({
+                filter: queryBuilder.op(
+                    payload.id,
+                    'in',
+                    queryBuilder.set(...payloads.map((p) => queryBuilder.uuid(p.id)))
+                ),
+                set: {
+                    payment,
+                },
+            }))
+            .run(db);
 
-    const savedPayment = await paymentRepository.save(payment);
-
-    for (const payload of payloads) {
-        payload.payment = savedPayment;
+        return session.url;
+    } else {
+        throw new NotFoundError('No unattached payloads found for the supplied user.');
     }
-
-    await payloadRepository.updatePayloadsPayment(
-        payloads.map((payload) => payload.id),
-        savedPayment
-    );
-
-    return session.url;
 }
 
-export async function getOngoingSessionCheckoutLink(userId: DataProcessor['id']) {
-    const ongoingPayment = await paymentRepository.getOngoingPayment(userId);
+export async function getOngoingSessionCheckoutLink(userId: DataSupplier['id']) {
+    const ongoingPayment = (
+        await queryBuilder
+            .select(queryBuilder.Payment, (payment) => ({
+                filter: queryBuilder.op(
+                    queryBuilder.op(payment.dataSupplier.id, '=', queryBuilder.uuid(userId)),
+                    'and',
+                    queryBuilder.op(payment.paymentState, '=', queryBuilder.PaymentState.PENDING)
+                ),
+
+                stripeCheckoutURL: true,
+            }))
+            .run(db)
+    )[0];
     if (ongoingPayment) {
+        console.log(ongoingPayment);
         return ongoingPayment.stripeCheckoutURL;
     } else {
         return '';

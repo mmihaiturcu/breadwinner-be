@@ -1,128 +1,276 @@
-import app from '@/config/App.js';
-import { PayloadDTO } from '@/types/models/PayloadDTO.js';
-import { Chunk } from '../Chunk/Chunk.js';
-import { User } from '../User/User.js';
-import { Payload } from './Payload.js';
+import app from '@/config/App';
+import { PayloadDTO } from '@/types/models/PayloadDTO';
 import { resolve } from 'path';
-import { INPUT_SAVE_PATH, OUTPUT_SAVE_PATH } from '@/utils/constants.js';
-import { appendFileSync, readFileSync } from 'fs';
 import {
-    ChunkProcessedEventData,
-    JSONSchema,
-    PayloadToProcess,
-    PayloadToProcessDTO,
-} from '@/types/models/index.js';
-import { DecryptPayloadDTOResponse } from '@/types/payloads/responses/DecryptPayloadDTOResponse.js';
+    CHUNK_INPUT_SAVE_PATH,
+    CHUNK_OUTPUT_SAVE_PATH,
+    GALOIS_KEYS_SAVE_PATH,
+    PUBLIC_KEYS_SAVE_PATH,
+    RELIN_KEYS_SAVE_PATH,
+} from '@/utils/constants';
+import { ChunkProcessedEventData, JSONSchema, PayloadToProcessDTO } from '@/types/models/index';
+import { DecryptPayloadDTOResponse } from '@/types/payloads/responses/DecryptPayloadDTOResponse';
 import { NotFoundError } from 'routing-controllers';
-import { DataProcessor } from '../DataProcessor/DataProcessor.js';
-
-const payloadRepository = app.payloadRepository;
-const chunkRepository = app.chunkRepository;
-const dataSupplierRepository = app.dataSupplierRepository;
+import { User, DataProcessor, Payload } from '../models/index';
+import queryBuilder from 'dbschema/edgeql-js/index';
+import { readFilePromise, writeFilePromise } from '@/utils/helper';
+const { db } = app;
 
 export async function createPayload(userId: User['id'], payloadDTO: PayloadDTO) {
-    const dataSupplier = await dataSupplierRepository.findById(userId);
-    if (dataSupplier) {
-        const payload = new Payload(
-            payloadDTO.label,
-            payloadDTO.jsonSchema,
-            dataSupplier,
-            payloadDTO.publicKey,
-            payloadDTO.galoisKeys,
-            payloadDTO.relinKeys
-        );
-        const savedPayload = await payloadRepository.save(payload);
+    try {
+        const hasRelinKeys = typeof payloadDTO.relinKeys !== 'undefined';
+        const hasGaloisKeys = typeof payloadDTO.galoisKeys !== 'undefined';
 
-        const chunks = payloadDTO.chunks.map((chunk) => new Chunk(savedPayload, chunk.length));
-        const savedChunks = await chunkRepository.save(chunks);
-        savedChunks.forEach((chunk, index) => {
-            const inputPath = resolve(INPUT_SAVE_PATH, `${chunk.id}`);
-            const bytes = payloadDTO.chunks[index].cipherText;
-            appendFileSync(inputPath, JSON.stringify(bytes));
-            chunk.inputPath = inputPath;
-        });
-        chunkRepository.save(savedChunks);
+        const savedPayload = await queryBuilder
+            .insert(queryBuilder.Payload, {
+                label: payloadDTO.label,
+                jsonSchema: queryBuilder.json(payloadDTO.jsonSchema),
+                hasRelinKeys,
+                hasGaloisKeys,
+                dataSupplier: queryBuilder.select(queryBuilder.DataSupplier, (dataSupplier) => ({
+                    filter: queryBuilder.op(dataSupplier.id, '=', queryBuilder.uuid(userId)),
+                    id: true,
+                })),
+                chunks: queryBuilder.set(
+                    ...payloadDTO.chunks.map((chunkDTO) =>
+                        queryBuilder.insert(queryBuilder.Chunk, {
+                            length: chunkDTO.length,
+                            paidFor: false,
+                            processed: true,
+                        })
+                    )
+                ),
+            })
+            .run(db);
 
-        savedPayload.chunks = savedChunks;
+        console.log('saved payload');
 
-        await payloadRepository.save(savedPayload);
-    } else {
+        const chunkIds = await queryBuilder
+            .select(queryBuilder.Payload, (payload) => ({
+                filter: queryBuilder.op(payload.id, '=', queryBuilder.uuid(savedPayload.id)),
+                chunks: {
+                    id: true,
+                },
+            }))
+            .run(db);
+
+        if (chunkIds) {
+            const fileWritePromises: Promise<void>[] = [];
+
+            chunkIds.chunks.forEach((chunk, index) => {
+                const inputPath = resolve(CHUNK_INPUT_SAVE_PATH, `${chunk.id}`);
+                const bytes = payloadDTO.chunks[index].cipherText;
+
+                fileWritePromises.push(writeFilePromise(inputPath, JSON.stringify(bytes)));
+            });
+
+            // Save keys to disk
+            fileWritePromises.push(
+                writeFilePromise(
+                    resolve(PUBLIC_KEYS_SAVE_PATH, savedPayload.id),
+                    payloadDTO.publicKey
+                )
+            );
+
+            if (hasRelinKeys) {
+                fileWritePromises.push(
+                    writeFilePromise(
+                        resolve(RELIN_KEYS_SAVE_PATH, savedPayload.id),
+                        payloadDTO.relinKeys!
+                    )
+                );
+            }
+
+            if (hasGaloisKeys) {
+                fileWritePromises.push(
+                    writeFilePromise(
+                        resolve(GALOIS_KEYS_SAVE_PATH, savedPayload.id),
+                        payloadDTO.galoisKeys!
+                    )
+                );
+            }
+
+            await Promise.all(fileWritePromises);
+            await queryBuilder
+                .update(queryBuilder.Chunk, (chunk) => ({
+                    filter: queryBuilder.op(
+                        chunk.id,
+                        'in',
+                        queryBuilder.set(...chunkIds.chunks.map((c) => queryBuilder.uuid(c.id)))
+                    ),
+                    set: {
+                        processed: false,
+                    },
+                }))
+                .run(db);
+        }
+    } catch (err) {
+        console.error(err);
         throw new NotFoundError('User for which to create payload not found');
     }
 }
 
 export async function getPayloadsForUser(userId: User['id']) {
-    const payloads = await payloadRepository.getPayloadsByUserId(userId);
-    const initialValue = 0;
+    const dataSupplier = await queryBuilder
+        .select(queryBuilder.DataSupplier, (dataSupplier) => ({
+            filter: queryBuilder.op(dataSupplier.id, '=', queryBuilder.uuid(userId)),
+            payloads: {
+                id: true,
+                label: true,
+                chunks: {
+                    id: true,
+                    length: true,
+                    processed: true,
+                },
+            },
+        }))
+        .run(db);
 
-    return payloads.map((payload) => {
-        return {
-            id: payload.id,
-            label: payload.label,
-            noChunks: payload.chunks.length,
-            totalDataLength: payload.chunks
-                .map((chunk) => chunk.length)
-                .reduce(
-                    (previousValue, currentValue) => previousValue + currentValue,
-                    initialValue
-                ),
-            progress:
-                payload.chunks.filter((chunk) => chunk.processed).length / payload.chunks.length,
-        };
-    });
+    if (dataSupplier) {
+        const payloads = dataSupplier.payloads;
+        return payloads.map((payload) => {
+            return {
+                id: payload.id,
+                label: payload.label,
+                noChunks: payload.chunks.length,
+                totalDataLength: payload.chunks
+                    .map((chunk) => chunk.length)
+                    .reduce((previousValue, currentValue) => previousValue + currentValue, 0),
+                progress:
+                    payload.chunks.filter((chunk) => chunk.processed).length /
+                    payload.chunks.length,
+            };
+        });
+    } else {
+        throw new NotFoundError('Data supplier is missing');
+    }
 }
 
-export async function getProcessingPayload(): Promise<PayloadToProcessDTO> {
-    const payload = (await payloadRepository.getPayloadToProcess()) as unknown as PayloadToProcess;
-    if (payload) {
-        const chunk = payload.chunks[0];
-        const loadedInput = readFileSync(chunk.inputPath, 'utf-8');
-
-        return {
-            id: payload.id,
-            jsonSchema: payload.jsonSchema,
-            publicKey: payload.publicKey,
-            chunk: {
-                id: chunk.id,
-                length: chunk.length,
-                columnsData: loadedInput,
+export async function getProcessingPayload(): Promise<PayloadToProcessDTO | void> {
+    const chunks = await queryBuilder
+        .select(queryBuilder.Chunk, (chunk) => ({
+            filter: queryBuilder.op(
+                queryBuilder.op(chunk.processed, '=', false),
+                'and',
+                queryBuilder.op(
+                    chunk.payload.payment.paymentState,
+                    '=',
+                    queryBuilder.PaymentState.PAID
+                )
+            ),
+            limit: 1,
+            id: true,
+            length: true,
+            payload: {
+                id: true,
+                jsonSchema: true,
+                hasGaloisKeys: true,
+                hasRelinKeys: true,
             },
-            galoisKeys: payload.galoisKeys,
-            relinKeys: payload.relinKeys,
-        };
+        }))
+        .run(db);
+    if (chunks.length) {
+        const chunk = chunks[0];
+        const payload = chunk.payload;
+        if (payload) {
+            const filePromises: Promise<string>[] = [];
+
+            filePromises.push(readFilePromise(resolve(CHUNK_INPUT_SAVE_PATH, chunk.id)));
+            filePromises.push(readFilePromise(resolve(PUBLIC_KEYS_SAVE_PATH, payload.id)));
+
+            if (payload.hasRelinKeys) {
+                filePromises.push(readFilePromise(resolve(RELIN_KEYS_SAVE_PATH, payload.id)));
+            }
+
+            if (payload.hasGaloisKeys) {
+                filePromises.push(readFilePromise(resolve(GALOIS_KEYS_SAVE_PATH, payload.id)));
+            }
+
+            const loadedFiles = await Promise.all(filePromises);
+
+            const publicKey = loadedFiles[1];
+
+            let relinKeys;
+            let galoisKeys;
+            if (payload.hasRelinKeys) {
+                relinKeys = loadedFiles[2];
+                galoisKeys = loadedFiles[3];
+            } else {
+                relinKeys = '';
+                galoisKeys = loadedFiles[2];
+            }
+
+            return {
+                id: payload.id,
+                jsonSchema: payload.jsonSchema as unknown as JSONSchema,
+                publicKey: publicKey,
+                chunk: {
+                    id: chunk.id,
+                    length: chunk.length,
+                    columnsData: loadedFiles[0],
+                },
+                relinKeys,
+                galoisKeys,
+            };
+        }
     }
 }
 
 export async function saveChunkProcessingResult(
-    dataProcessor: DataProcessor,
+    dataProcessorId: DataProcessor['id'],
     data: ChunkProcessedEventData
 ) {
-    const chunk = await chunkRepository.findById(data.chunkId);
-    if (!chunk.processed) {
-        chunk.dataProcessor = dataProcessor;
+    // Update the chunk that was just processed
+    const chunk = await queryBuilder
+        .update(queryBuilder.Chunk, (chunk) => ({
+            filter: queryBuilder.op(
+                queryBuilder.op(chunk.id, '=', queryBuilder.uuid(data.chunkId)),
+                'and',
+                queryBuilder.op(chunk.processed, '=', false)
+            ),
+            set: {
+                dataProcessor: queryBuilder.select(queryBuilder.DataProcessor, (dataProcessor) => ({
+                    filter: queryBuilder.op(
+                        dataProcessor.id,
+                        '=',
+                        queryBuilder.uuid(dataProcessorId)
+                    ),
+                })),
+                processed: true,
+            },
+        }))
+        .run(db);
 
-        const outputPath = resolve(OUTPUT_SAVE_PATH, `${chunk.id}`);
-        appendFileSync(outputPath, data.result);
-        chunk.outputPath = outputPath;
-        chunk.processed = true;
-        await chunkRepository.save(chunk);
+    if (chunk) {
+        console.log('saved chunk', chunk);
+        const outputPath = resolve(CHUNK_OUTPUT_SAVE_PATH, `${chunk[0].id}`);
+        return writeFilePromise(outputPath, data.result);
     }
 }
 
 export async function getDecryptInfoForPayload(
     id: Payload['id']
 ): Promise<DecryptPayloadDTOResponse> {
-    const payload = (await payloadRepository.getPayloadDecryptInfo(id)) as unknown as {
-        jsonSchema: JSONSchema;
-        chunks: {
-            id: Chunk['id'];
-            length: Chunk['length'];
-        }[];
-    };
+    const payload = await queryBuilder
+        .select(queryBuilder.Payload, (payload) => ({
+            filter: queryBuilder.op(payload.id, '=', queryBuilder.uuid(id)),
+            jsonSchema: true,
+            chunks: {
+                id: true,
+                length: true,
+            },
+        }))
+        .run(db);
 
-    return {
-        endResultType:
-            payload.jsonSchema.operations[payload.jsonSchema.operations.length - 1].resultType,
-        chunks: payload.chunks,
-    };
+    if (payload) {
+        const parsedJSONSchema = JSON.parse(payload.jsonSchema) as JSONSchema;
+
+        return {
+            endResultType:
+                parsedJSONSchema.operations[parsedJSONSchema.operations.length - 1].resultType,
+            chunks: payload.chunks,
+        };
+    } else {
+        throw new NotFoundError('Payload could not be found');
+    }
 }

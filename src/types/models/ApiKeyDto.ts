@@ -1,3 +1,3 @@
-import { APIKey } from '@/database/models';
+import { APIKey } from '@/database/models/index';
 
-export type ApiKeyDto = Pick<APIKey, 'id' | 'prefix' | 'hostname' | 'createdAt'>;
+export type ApiKeyDto = Pick<APIKey, 'id' | 'prefix' | 'hostname'>;

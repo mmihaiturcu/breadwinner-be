@@ -1,4 +1,4 @@
-import { Payload, Payment } from '@/database/models';
+import { Payload, Payment } from '@/database/models/index';
 import { JSONSchema } from './JSONSchema';
 
 export interface UnattachedPayload {

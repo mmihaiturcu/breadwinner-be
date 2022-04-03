@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "skipLibCheck": true,
         "sourceMap": true,
         "module": "ESNext",
         "esModuleInterop": true,
@@ -11,9 +12,12 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "paths": {
-            "@/*": ["src/*"]
-        }
+            "@/*": ["src/*"],
+            "dbschema": ["./dbschema"]
+        },
+        "strict": true,
+        "downlevelIteration": true
     },
     "include": ["src/**/*.ts"],
-    "exclude": ["node_modules"]
+    "exclude": ["node_modules", "**/dbschema"]
 }
