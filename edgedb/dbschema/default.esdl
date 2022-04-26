@@ -23,7 +23,6 @@ module default {
             constraint exclusive;
         }
         property password -> str;
-        property salt -> str;
         required property role -> Role;
         property otpSecret -> str;
         

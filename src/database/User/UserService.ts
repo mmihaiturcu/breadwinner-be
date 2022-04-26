@@ -1,6 +1,5 @@
-import { getUUIDV4, hashAndSaltPasswordToHex, timingSafeEqualStrings } from '@/utils/helper';
+import { getUUIDV4 } from '@/utils/helper';
 import { addWeeks } from 'date-fns';
-import { randomBytes } from 'crypto';
 import app from '@/config/App';
 import {
     Enable2FARequest,
@@ -13,7 +12,7 @@ import {
     getGeneralEmailTemplate,
     sendMail,
 } from '@/utils/emailService';
-import { FRONTEND_URL, USER_ROLE_TO_STRING } from '@/utils/constants';
+import { ARGON_OPTIONS, FRONTEND_URL, USER_ROLE_TO_STRING } from '@/utils/constants';
 import { BadRequestError, InternalServerError, UnauthorizedError } from 'routing-controllers';
 import { UserDetails } from '@/types/payloads/responses/UserDetails';
 import { HTTPConflictError } from '@/errors/HTTPConflictError';
@@ -21,6 +20,8 @@ import { authenticator } from 'otplib';
 import { toDataURL } from 'qrcode';
 import { GetTrialQRCodeResponse } from '@/types/payloads/responses/GetTrialQRCodeResponse';
 import { Role, User } from '../models/index';
+import argon2 from 'argon2';
+const { hash, verify } = argon2;
 import queryBuilder from 'dbschema/edgeql-js/index';
 const { db } = app;
 
@@ -96,7 +97,6 @@ export async function sendAccountConfirmationEmail(email: string, role: Role, uu
 }
 
 export async function finishUserAccount(payload: UserFinishRequest): Promise<void> {
-    const salt = randomBytes(16);
     const confirmation = queryBuilder.update(queryBuilder.Confirmation, (confirmation) => ({
         filter: queryBuilder.op(confirmation.uuid, '=', payload.confirmationUuid),
         set: {
@@ -104,10 +104,11 @@ export async function finishUserAccount(payload: UserFinishRequest): Promise<voi
         },
     }));
 
+    const hashedPassword = await hash(payload.password, ARGON_OPTIONS);
+
     const query = queryBuilder.update(confirmation['<confirmation[is User]'], (c) => ({
         set: {
-            salt: salt.toString('hex'),
-            password: hashAndSaltPasswordToHex(payload.password, salt),
+            password: hashedPassword,
         },
     }));
 
@@ -121,7 +122,6 @@ export async function loginUser(
         filter: queryBuilder.op(user.email, '=', payload.email),
         id: true,
         password: true,
-        salt: true,
         email: true,
         role: true,
         otpSecret: true,
@@ -130,14 +130,7 @@ export async function loginUser(
     const user = await query.run(db);
 
     if (user) {
-        if (
-            user.password &&
-            user.salt &&
-            timingSafeEqualStrings(
-                user.password,
-                hashAndSaltPasswordToHex(payload.password, Buffer.from(user.salt, 'hex'))
-            )
-        ) {
+        if (user.password && (await verify(user.password, payload.password, ARGON_OPTIONS))) {
             const roleSpecificDetails = await (user.role === 'DATA_PROCESSOR'
                 ? queryBuilder.select(queryBuilder.DataProcessor, (dataProcessor) => ({
                       filter: queryBuilder.op(

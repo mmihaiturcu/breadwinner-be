@@ -37,7 +37,7 @@ class App {
     }
 
     private static configureDB(): Client {
-        return createClient({ dsn: 'breadwinner' });
+        return createClient({ dsn: 'breadwinnerNightly' });
     }
 
     public static async getAppInstance(): Promise<App> {
