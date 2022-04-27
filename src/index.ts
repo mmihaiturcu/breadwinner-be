@@ -145,7 +145,6 @@ httpsServer.on('upgrade', async function upgrade(request, socket, head) {
 
             wss.handleUpgrade(request, socket, head, function done(ws) {
                 socketMap.set(ws, {
-                    apiKey,
                     dataProcessorId,
                     payloadToken: '',
                 });
