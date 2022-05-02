@@ -3,7 +3,7 @@ import argon2 from 'argon2';
 const { argon2id } = argon2;
 import { resolve } from 'path';
 
-export const SERVER_PORT = 8420;
+export const SERVER_PORT = process.argv[2];
 export const DB_PORT = 5432;
 export const FRONTEND_URL = 'https://localhost:8080';
 export const BACKEND_URL = `https://localhost:${SERVER_PORT}`;

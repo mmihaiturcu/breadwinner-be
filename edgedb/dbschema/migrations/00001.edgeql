@@ -1,4 +1,4 @@
-CREATE MIGRATION m1kk43ashwjkhavo24a2pcpy2emntjlgcykv66irsbtcq7xbrtqhca
+CREATE MIGRATION m1payn7nc7binntds4jhc2vplxkabneitbxlk43wtpgoi5fjvjozza
     ONTO initial
 {
   CREATE TYPE default::APIKey {
@@ -20,7 +20,6 @@ CREATE MIGRATION m1kk43ashwjkhavo24a2pcpy2emntjlgcykv66irsbtcq7xbrtqhca
       CREATE PROPERTY otpSecret -> std::str;
       CREATE PROPERTY password -> std::str;
       CREATE REQUIRED PROPERTY role -> default::Role;
-      CREATE PROPERTY salt -> std::str;
   };
   CREATE TYPE default::DataProcessor {
       CREATE LINK userDetails -> default::User {
