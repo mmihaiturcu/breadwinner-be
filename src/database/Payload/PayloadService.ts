@@ -268,6 +268,7 @@ export async function getDecryptInfoForPayload(
         return {
             endResultType:
                 parsedJSONSchema.operations[parsedJSONSchema.operations.length - 1].resultType,
+            schemeType: parsedJSONSchema.schemeType,
             chunks: payload.chunks,
         };
     } else {
