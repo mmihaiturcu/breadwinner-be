@@ -4,7 +4,7 @@ import { MINIMUM_CHUNKS_FOR_PAYOUT, PAYMENT_OFFERED_PER_CHUNK } from '@/utils/co
 import queryBuilder from 'dbschema/edgeql-js/index';
 const { db, stripe } = app;
 
-if (process.argv[3] === 'RUN_JOBS') {
+if (process.argv[3] === 'MAIN_SERVER') {
     // Every week, at 00:00 on a Monday.
     cron.schedule('0 * * * 1', async () => {
         try {

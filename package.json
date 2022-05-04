@@ -9,7 +9,7 @@
         "tsc": "tsc --build --verbose && tsc-alias -p tsconfig.json",
         "build": "npm-run-all clean tsc",
         "dev:start": "npm-run-all build start",
-        "start": "start node --es-module-specifier-resolution=node dist/src/index.js 8421 RUN_JOBS && start node --es-module-specifier-resolution=node dist/src/index.js 8422",
+        "start": "start node --es-module-specifier-resolution=node dist/src/index.js 8421 MAIN_SERVER && start node --es-module-specifier-resolution=node dist/src/index.js 8422",
         "test": "echo \"Error: no test specified\" && exit 1",
         "serve": "nodemon --watch src -e ts,ejs --exec npm run dev:start",
         "syncDB": "@powershell -NoProfile -ExecutionPolicy Unrestricted -Command ./syncDB.ps1",

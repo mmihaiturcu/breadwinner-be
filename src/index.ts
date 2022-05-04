@@ -70,7 +70,7 @@ httpsServer.listen(SERVER_PORT);
 
 console.log(`Server listening on port ${SERVER_PORT}...`);
 
-if (process.env.npm_config_SYNC !== undefined) {
+if (process.env.npm_config_SYNC !== undefined && process.argv[3] === 'MAIN_SERVER') {
     cleanDirectory(CHUNK_INPUT_SAVE_PATH);
     cleanDirectory(CHUNK_OUTPUT_SAVE_PATH);
     cleanDirectory(PUBLIC_KEYS_SAVE_PATH);

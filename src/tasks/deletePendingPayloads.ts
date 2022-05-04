@@ -8,7 +8,7 @@ import queryBuilder from 'dbschema/edgeql-js/index';
 import { subHours } from 'date-fns';
 const { db, stripe } = app;
 
-if (process.argv[3] === 'RUN_JOBS') {
+if (process.argv[3] === 'MAIN_SERVER') {
     // Every hour, on the dot.
     cron.schedule('0 * * * *', async () => {
         try {

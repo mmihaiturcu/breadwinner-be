@@ -5,7 +5,7 @@ import redisClient from '@/config/redisClient';
 const RedisStore = connectRedis(session);
 const store = new RedisStore({ client: redisClient });
 
-if (process.env.npm_config_SYNC !== undefined) {
+if (process.env.npm_config_SYNC !== undefined && process.argv[3] === 'MAIN_SERVER') {
     if (store.clear) {
         store.clear();
     }
