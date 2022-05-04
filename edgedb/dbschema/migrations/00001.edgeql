@@ -1,4 +1,4 @@
-CREATE MIGRATION m1payn7nc7binntds4jhc2vplxkabneitbxlk43wtpgoi5fjvjozza
+CREATE MIGRATION m1lx77h3qzm2zf64wav2fztmhpwx3e6bclkj5feqs526jypzay2adq
     ONTO initial
 {
   CREATE TYPE default::APIKey {
@@ -11,7 +11,7 @@ CREATE MIGRATION m1payn7nc7binntds4jhc2vplxkabneitbxlk43wtpgoi5fjvjozza
       CREATE REQUIRED PROPERTY uuid -> std::str;
       CREATE REQUIRED PROPERTY wasUsed -> std::bool;
   };
-  CREATE SCALAR TYPE default::Role EXTENDING enum<DATA_SUPPLIER, DATA_PROCESSOR, ADMIN>;
+  CREATE SCALAR TYPE default::Role EXTENDING enum<DATA_SUPPLIER, DATA_PROCESSOR>;
   CREATE TYPE default::User {
       CREATE LINK confirmation -> default::Confirmation;
       CREATE REQUIRED PROPERTY email -> std::str {

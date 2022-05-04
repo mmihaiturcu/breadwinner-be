@@ -16,7 +16,7 @@ module default {
         required property expiresAt -> datetime;
     }
 
-    scalar type Role extending enum<DATA_SUPPLIER, DATA_PROCESSOR, ADMIN>;
+    scalar type Role extending enum<DATA_SUPPLIER, DATA_PROCESSOR>;
 
     type User {
         required property email -> str {

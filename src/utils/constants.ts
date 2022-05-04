@@ -30,7 +30,6 @@ export const GALOIS_KEYS_SAVE_PATH = resolve(process.cwd(), 'files', 'keys', 'ga
 export const USER_ROLE_TO_STRING = {
     [Role.DATA_SUPPLIER]: 'Data supplier',
     [Role.DATA_PROCESSOR]: 'Data processor',
-    [Role.ADMIN]: 'Admin',
 };
 
 export const DATA_PROCESSING_PRODUCT_STRIPE_ID = 'prod_LOPQsPEz1lfqCR';
