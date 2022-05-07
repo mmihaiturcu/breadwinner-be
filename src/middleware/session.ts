@@ -13,7 +13,7 @@ if (process.env.npm_config_SYNC !== undefined && process.argv[3] === 'MAIN_SERVE
 
 export const sessionMiddleware = session({
     store: store,
-    secret: 'oZQrLuKL1UlldsU9e24W',
+    secret: process.env.SESSION_SECRET,
     saveUninitialized: false,
     resave: false,
     name: 'SESSION_ID',

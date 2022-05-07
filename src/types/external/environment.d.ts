@@ -16,5 +16,7 @@ declare namespace NodeJS {
         FRONTEND_URL: string;
 
         DATABASE_DSN: string;
+
+        SESSION_SECRET: string;
     }
 }
