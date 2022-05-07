@@ -1,21 +1,14 @@
 import { EmailAction } from '@/types/models/index';
 import nodeMailer, { SendMailOptions } from 'nodemailer';
 import path from 'path';
-import {
-    EMAIL_HOST,
-    EMAIL_HOST_PORT,
-    EMAIL_PASSWORD,
-    EMAIL_USERNAME,
-    FRONTEND_URL,
-} from './constants';
 
 const transporter = nodeMailer.createTransport({
-    host: EMAIL_HOST,
-    port: EMAIL_HOST_PORT,
+    host: process.env.EMAIL_HOST,
+    port: Number(process.env.EMAIL_HOST_PORT),
     secure: true,
     auth: {
-        user: EMAIL_USERNAME,
-        pass: EMAIL_PASSWORD,
+        user: process.env.EMAIL_USERNAME,
+        pass: process.env.EMAIL_PASSWORD,
     },
 });
 
@@ -38,7 +31,7 @@ export function getGeneralEmailTemplate(title: string, content: string) {
                             </tr>
                             <tr>
                                 <td style="text-align: center">
-                                    <a href="${FRONTEND_URL}" title="Breadwinner logo" target="_blank">
+                                    <a href="${process.env.FRONTEND_URL}" title="Breadwinner logo" target="_blank">
                                         <img src="cid:logo@breadwinner" title="Breadwinner logo" alt="Breadwinner logo" style="width: 100%; max-width: 450px;">;
                                     </a> 
                                 </td>
@@ -95,7 +88,7 @@ export function getContentWithMessageAndButton(messageLines: string[], actions: 
 export async function sendMail(mailOptions: Omit<SendMailOptions, 'from'>) {
     await transporter.sendMail({
         ...mailOptions,
-        from: EMAIL_USERNAME,
+        from: process.env.EMAIL_USERNAME,
         attachments: [
             ...(mailOptions.attachments ?? []),
             {

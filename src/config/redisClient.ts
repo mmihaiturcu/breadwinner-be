@@ -1,9 +1,12 @@
+import dotenv from 'dotenv';
+import { resolve } from 'path';
+const parse = dotenv.config({ path: resolve(process.cwd(), '.env') });
 import { createClient } from 'redis';
-import { REDIS_HOST, REDIS_PORT } from '@/utils/constants';
 
 const client = createClient({
     legacyMode: true,
-    url: `redis://${REDIS_HOST}:${REDIS_PORT}`,
+    url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+    password: process.env.REDIS_PASS,
 });
 
 try {

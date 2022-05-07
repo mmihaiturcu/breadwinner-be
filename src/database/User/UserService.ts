@@ -12,7 +12,7 @@ import {
     getGeneralEmailTemplate,
     sendMail,
 } from '@/utils/emailService';
-import { ARGON_OPTIONS, FRONTEND_URL, USER_ROLE_TO_STRING } from '@/utils/constants';
+import { ARGON_OPTIONS, USER_ROLE_TO_STRING } from '@/utils/constants';
 import { BadRequestError, InternalServerError, UnauthorizedError } from 'routing-controllers';
 import { UserDetails } from '@/types/payloads/responses/UserDetails';
 import { HTTPConflictError } from '@/errors/HTTPConflictError';
@@ -88,7 +88,7 @@ export async function sendAccountConfirmationEmail(email: string, role: Role, uu
                 [
                     {
                         text: 'Set password',
-                        url: `${FRONTEND_URL}/#/confirmation?uuid=${uuid}`,
+                        url: `${process.env.FRONTEND_URL}/#/confirmation?uuid=${uuid}`,
                     },
                 ]
             )
@@ -294,8 +294,8 @@ export async function getConnectedStripeAccountLink(userId: User['id']) {
         try {
             const accountLink = await app.stripe.accountLinks.create({
                 account: connectedStripeAccountID,
-                refresh_url: FRONTEND_URL,
-                return_url: FRONTEND_URL,
+                refresh_url: process.env.FRONTEND_URL,
+                return_url: process.env.FRONTEND_URL,
                 // type: dataProcessor.activatedStripeAccount ? 'account_update' : 'account_onboarding',
                 type: 'account_onboarding',
             });

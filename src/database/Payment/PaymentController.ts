@@ -1,6 +1,5 @@
 import { BadRequestError, Controller, Post, Req, UseAfter, UseBefore } from 'routing-controllers';
 import app from '@/config/App';
-import { STRIPE_WEBHOOK_SECRET } from '@/utils/constants';
 import Stripe from 'stripe';
 import { Request, Response } from 'express';
 import { authenticationMiddleware, csrfMiddleware, loggingMiddleware } from '@/middleware/index';
@@ -18,7 +17,11 @@ export async function handleWebhookEvent(req: Request, res: Response) {
         let event: Stripe.Event;
 
         try {
-            event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
+            event = stripe.webhooks.constructEvent(
+                req.body,
+                sig,
+                process.env.STRIPE_WEBHOOK_SECRET
+            );
         } catch (err) {
             console.log('error', err);
             throw new BadRequestError(`Invalid signature`);

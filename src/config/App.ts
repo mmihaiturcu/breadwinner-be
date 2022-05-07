@@ -1,4 +1,3 @@
-import { FRONTEND_URL, STRIPE_SECRET_KEY } from '@/utils/constants';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -29,7 +28,7 @@ class App {
         });
         this.app.expressApp.use(
             cors({
-                origin: FRONTEND_URL,
+                origin: process.env.FRONTEND_URL,
                 credentials: true,
             })
         );
@@ -37,7 +36,7 @@ class App {
     }
 
     private static configureDB(): Client {
-        return createClient({ dsn: 'breadwinnerNightly' });
+        return createClient({ dsn: process.env.DATABASE_DSN });
     }
 
     public static async getAppInstance(): Promise<App> {
@@ -46,7 +45,7 @@ class App {
             this.app.expressApp = express();
             this.configureExpressApp();
             this.app.db = await this.configureDB();
-            this.app.stripe = new Stripe(STRIPE_SECRET_KEY, {
+            this.app.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
                 apiVersion: '2020-08-27',
             });
         }

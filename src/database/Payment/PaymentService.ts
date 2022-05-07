@@ -1,12 +1,6 @@
 import App from '@/config/App';
 import { JSONSchema } from '@/types/models/index';
-import {
-    DATA_PROCESSING_PRODUCT_STRIPE_ID,
-    FRONTEND_URL,
-    MIN_PAYLOAD_PRICE,
-    PRICE_PER_CHUNK,
-    PRICE_PER_OPERATION,
-} from '@/utils/constants';
+import { MIN_PAYLOAD_PRICE, PRICE_PER_CHUNK, PRICE_PER_OPERATION } from '@/utils/constants';
 import { User, DataSupplier, PaymentState } from '../models/index';
 import queryBuilder from 'dbschema/edgeql-js/index';
 import { NotFoundError } from 'routing-controllers';
@@ -50,14 +44,14 @@ export async function createPaymentForUnattachedPayloads(
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             mode: 'payment',
-            success_url: FRONTEND_URL,
-            cancel_url: FRONTEND_URL,
+            success_url: process.env.FRONTEND_URL,
+            cancel_url: process.env.FRONTEND_URL,
             customer_email: email,
             line_items: [
                 {
                     quantity: 1,
                     price_data: {
-                        product: DATA_PROCESSING_PRODUCT_STRIPE_ID,
+                        product: process.env.DATA_PROCESSING_PRODUCT_STRIPE_ID,
                         unit_amount: stringPrice,
                         currency: 'usd',
                     },
