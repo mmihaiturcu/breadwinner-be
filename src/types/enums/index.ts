@@ -1,5 +1,5 @@
 export { HttpStatusCode } from './HttpStatusCode';
-export { Operations } from './Operations';
+export { OperationType } from './OperationType';
 export { WebsocketEventTypes } from './WebsocketEventTypes';
 export { OperandTypes } from './OperandTypes';
 export { PaymentStates } from './PaymentStates';

@@ -1,8 +1,8 @@
 import { Operand } from '.';
-import { OperandTypes, Operations } from '../enums';
+import { OperandTypes, OperationType } from '../enums';
 
 export interface OperationDTO {
-    name: Operations;
+    type: OperationType;
     operands: Operand[];
     resultType: OperandTypes;
 }
