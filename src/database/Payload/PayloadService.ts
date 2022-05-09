@@ -36,7 +36,7 @@ export async function createPayload(userId: User['id'], payloadDTO: PayloadDTO) 
                         queryBuilder.insert(queryBuilder.Chunk, {
                             length: chunkDTO.length,
                             paidFor: false,
-                            processed: true,
+                            processed: false,
                         })
                     )
                 ),
@@ -91,18 +91,6 @@ export async function createPayload(userId: User['id'], payloadDTO: PayloadDTO) 
             }
 
             await Promise.all(fileWritePromises);
-            await queryBuilder
-                .update(queryBuilder.Chunk, (chunk) => ({
-                    filter: queryBuilder.op(
-                        chunk.id,
-                        'in',
-                        queryBuilder.set(...chunkIds.chunks.map((c) => queryBuilder.uuid(c.id)))
-                    ),
-                    set: {
-                        processed: false,
-                    },
-                }))
-                .run(db);
         }
     } catch (err) {
         console.error(err);
