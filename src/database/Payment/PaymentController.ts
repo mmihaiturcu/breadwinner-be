@@ -7,7 +7,8 @@ import {
     createPaymentForUnattachedPayloads,
     getOngoingSessionCheckoutLink,
 } from './PaymentService';
-import queryBuilder from 'dbschema/edgeql-js/index';
+import { markDataProcessorActivatedStripeAccount } from '../User/UserRepository';
+import { markPayloadAsPaid } from '../Payload/PayloadRepository';
 const { db, stripe } = app;
 
 export async function handleWebhookEvent(req: Request, res: Response) {
@@ -33,40 +34,14 @@ export async function handleWebhookEvent(req: Request, res: Response) {
             case 'account.updated': {
                 const account: Stripe.Account = event.data.object as Stripe.Account;
                 if (account.charges_enabled) {
-                    await queryBuilder
-                        .update(queryBuilder.DataProcessor, (dataProcessor) => ({
-                            filter: queryBuilder.op(
-                                dataProcessor.id,
-                                '=',
-                                queryBuilder.uuid(account.metadata!.id)
-                            ),
-                            set: {
-                                activatedStripeAccount: true,
-                            },
-                        }))
-                        .run(db);
+                    await markDataProcessorActivatedStripeAccount(account.metadata!.id).run(db);
                 }
                 break;
             }
             case 'checkout.session.completed': {
                 const session: Stripe.Checkout.Session = event.data
                     .object as Stripe.Checkout.Session;
-                await queryBuilder
-                    .update(queryBuilder.Payload, (payload) => ({
-                        filter: queryBuilder.op(
-                            payload.id,
-                            '=',
-                            queryBuilder.uuid(session.metadata!.payloadId)
-                        ),
-                        set: {
-                            payment: queryBuilder.update(payload.payment, () => ({
-                                set: {
-                                    paymentState: queryBuilder.PaymentState.PAID,
-                                },
-                            })),
-                        },
-                    }))
-                    .run(db);
+                await markPayloadAsPaid(session.metadata!.payloadId).run(db);
                 break;
             }
 

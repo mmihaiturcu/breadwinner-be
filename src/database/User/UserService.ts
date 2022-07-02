@@ -1,5 +1,4 @@
 import { getUUIDV4 } from '@/utils/helper';
-import { addWeeks } from 'date-fns';
 import app from '@/config/App';
 import {
     Enable2FARequest,
@@ -22,48 +21,44 @@ import { GetTrialQRCodeResponse } from '@/types/payloads/responses/GetTrialQRCod
 import { Role, User } from '../models/index';
 import argon2 from 'argon2';
 const { hash, verify } = argon2;
-import queryBuilder from 'dbschema/edgeql-js/index';
+import {
+    addDataProcessor,
+    addDataSupplier,
+    completeUserAccount,
+    disableUser2FA,
+    getDataProcessorConnectedStripeId,
+    getDataProcessorId,
+    getDataSupplierId,
+    getUserByEmail,
+    setDataProcessorConnectedStripeId,
+    setUserOtpSecret,
+} from './UserRepository';
 const { db } = app;
 
 export async function createUser(
     payload: UserCreateRequest
 ): Promise<{ email: string; role: Role; uuid: string }> {
     const uuid = getUUIDV4();
-    // 1. Create Confirmation for the user
-    const confirmation = queryBuilder.insert(queryBuilder.Confirmation, {
-        uuid,
-        expiresAt: addWeeks(new Date(), 1),
-        wasUsed: false,
-    });
-
-    const user = queryBuilder.insert(queryBuilder.User, {
+    const userDetails = {
         email: payload.email,
-        confirmation,
         role: payload.userRole,
-    });
+        confirmationUuid: uuid,
+    };
 
-    // 2. Create either a DataSupplier or DataProcessor
     try {
         switch (payload.userRole) {
             case Role.DATA_SUPPLIER: {
-                const query = queryBuilder.insert(queryBuilder.DataSupplier, {
-                    userDetails: user,
-                });
-                await query.run(db);
+                await addDataSupplier(userDetails).run(db);
                 break;
             }
             case Role.DATA_PROCESSOR: {
-                const query = queryBuilder.insert(queryBuilder.DataProcessor, {
-                    userDetails: user,
-                    activatedStripeAccount: false,
-                });
-                await query.run(db);
+                await addDataProcessor(userDetails).run(db);
                 break;
             }
         }
     } catch (error) {
         console.log(error);
-        // 2.1 Handle the case in which another user with the same email exists.
+        // Handle the case in which another user with the same email exists.
         throw new HTTPConflictError('A user with the specified email address already exists.');
     }
 
@@ -97,57 +92,24 @@ export async function sendAccountConfirmationEmail(email: string, role: Role, uu
 }
 
 export async function finishUserAccount(payload: UserFinishRequest): Promise<void> {
-    const confirmation = queryBuilder.update(queryBuilder.Confirmation, (confirmation) => ({
-        filter: queryBuilder.op(confirmation.uuid, '=', payload.confirmationUuid),
-        set: {
-            wasUsed: true,
-        },
-    }));
-
     const hashedPassword = await hash(payload.password, ARGON_OPTIONS);
 
-    const query = queryBuilder.update(confirmation['<confirmation[is User]'], (c) => ({
-        set: {
-            password: hashedPassword,
-        },
-    }));
-
-    await query.run(db);
+    await completeUserAccount({
+        confirmationUuid: payload.confirmationUuid,
+        password: hashedPassword,
+    }).run(db);
 }
 
 export async function loginUser(
     payload: UserLoginRequest
 ): Promise<{ userDetails: UserDetails; secretFor2FA: User['otpSecret'] }> {
-    const query = queryBuilder.select(queryBuilder.User, (user) => ({
-        filter: queryBuilder.op(user.email, '=', payload.email),
-        id: true,
-        password: true,
-        email: true,
-        role: true,
-        otpSecret: true,
-    }));
-
-    const user = await query.run(db);
+    const user = await getUserByEmail(payload.email).run(db);
 
     if (user) {
         if (user.password && (await verify(user.password, payload.password, ARGON_OPTIONS))) {
             const roleSpecificDetails = await (user.role === 'DATA_PROCESSOR'
-                ? queryBuilder.select(queryBuilder.DataProcessor, (dataProcessor) => ({
-                      filter: queryBuilder.op(
-                          dataProcessor.userDetails.id,
-                          '=',
-                          queryBuilder.uuid(user.id)
-                      ),
-                      id: true,
-                  }))
-                : queryBuilder.select(queryBuilder.DataSupplier, (dataSupplier) => ({
-                      filter: queryBuilder.op(
-                          dataSupplier.userDetails.id,
-                          '=',
-                          queryBuilder.uuid(user.id)
-                      ),
-                      id: true,
-                  }))
+                ? getDataProcessorId(user.id)
+                : getDataSupplierId(user.id)
             ).run(db);
 
             console.log(
@@ -226,13 +188,7 @@ export async function enable2FA(userId: User['id'], payload: Enable2FARequest) {
         token: payload.token,
     });
     if (verified) {
-        const query = queryBuilder.update(queryBuilder.User, (user) => ({
-            filter: queryBuilder.op(user.id, '=', queryBuilder.uuid(userId)),
-            set: {
-                otpSecret: payload.secret,
-            },
-        }));
-        await query.run(db);
+        await setUserOtpSecret({ id: userId, secret: payload.secret }).run(db);
     } else {
         throw new BadRequestError(
             'Token is incorrect or stale, validation could not be performed.'
@@ -241,14 +197,7 @@ export async function enable2FA(userId: User['id'], payload: Enable2FARequest) {
 }
 
 export async function disable2FA(userId: User['id']) {
-    const query = queryBuilder.update(queryBuilder.User, (user) => ({
-        filter: queryBuilder.op(user.id, '=', queryBuilder.uuid(userId)),
-        set: {
-            otpSecret: null,
-        },
-    }));
-
-    await query.run(db);
+    await disableUser2FA(userId).run(db);
 }
 
 export function validate2FAToken(secret: User['otpSecret'], token: string) {
@@ -263,12 +212,7 @@ export function validate2FAToken(secret: User['otpSecret'], token: string) {
 }
 
 export async function getConnectedStripeAccountLink(userId: User['id']) {
-    const dataProcessor = await queryBuilder
-        .select(queryBuilder.DataProcessor, (dataProcessor) => ({
-            filter: queryBuilder.op(dataProcessor.id, '=', queryBuilder.uuid(userId)),
-            connectedStripeAccountID: true,
-        }))
-        .run(db);
+    const dataProcessor = await getDataProcessorConnectedStripeId(userId).run(db);
 
     if (dataProcessor) {
         let connectedStripeAccountID = dataProcessor.connectedStripeAccountID;
@@ -282,14 +226,9 @@ export async function getConnectedStripeAccountLink(userId: User['id']) {
                 country: 'US',
             });
             connectedStripeAccountID = account.id;
-            await queryBuilder
-                .update(queryBuilder.DataProcessor, (dataProcessor) => ({
-                    filter: queryBuilder.op(dataProcessor.id, '=', queryBuilder.uuid(userId)),
-                    set: {
-                        connectedStripeAccountID,
-                    },
-                }))
-                .run(db);
+            await setDataProcessorConnectedStripeId({ id: userId, connectedStripeAccountID }).run(
+                db
+            );
         }
         try {
             const accountLink = await app.stripe.accountLinks.create({

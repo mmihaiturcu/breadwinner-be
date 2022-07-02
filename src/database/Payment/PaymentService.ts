@@ -1,9 +1,10 @@
 import App from '@/config/App';
 import { JSONSchema } from '@/types/models/index';
 import { MIN_PAYLOAD_PRICE, PRICE_PER_CHUNK, PRICE_PER_OPERATION } from '@/utils/constants';
-import { User, DataSupplier, PaymentState } from '../models/index';
-import queryBuilder from 'dbschema/edgeql-js/index';
+import { User, DataSupplier } from '../models/index';
 import { NotFoundError } from 'routing-controllers';
+import { getDataSupplierUnattachedPayloads } from '../User/UserRepository';
+import { createPayment, getOngoingPaymentByDataSupplier } from './PaymentRepository';
 const { db, stripe } = App;
 
 export async function createPaymentForUnattachedPayloads(
@@ -11,17 +12,7 @@ export async function createPaymentForUnattachedPayloads(
     email: User['email']
 ) {
     // Get payloads without any payment attached.
-    const dataSupplier = await queryBuilder
-        .select(queryBuilder.DataSupplier, (dataSupplier) => ({
-            filter: queryBuilder.op(dataSupplier.id, '=', queryBuilder.uuid(userId)),
-            payloads: (payload) => ({
-                filter: queryBuilder.op('not', queryBuilder.op('exists', payload.payment)),
-                id: true,
-                jsonSchema: true,
-                noChunks: queryBuilder.count(payload.chunks),
-            }),
-        }))
-        .run(db);
+    const dataSupplier = await getDataSupplierUnattachedPayloads(userId).run(db);
 
     if (dataSupplier && dataSupplier.payloads.length) {
         const payloads = dataSupplier.payloads;
@@ -62,29 +53,14 @@ export async function createPaymentForUnattachedPayloads(
             },
         });
 
-        // Create Payment
-        const payment = queryBuilder.insert(queryBuilder.Payment, {
-            stripeSessionID: session.id,
-            stripeCheckoutURL: session.url!,
-            dataSupplier: queryBuilder.select(queryBuilder.DataSupplier, (dataSupplier) => ({
-                filter: queryBuilder.op(dataSupplier.id, '=', queryBuilder.uuid(userId)),
-            })),
-            createdAt: new Date(),
-            paymentState: PaymentState.PENDING,
-        });
-
-        await queryBuilder
-            .update(queryBuilder.Payload, (payload) => ({
-                filter: queryBuilder.op(
-                    payload.id,
-                    'in',
-                    queryBuilder.set(...payloads.map((p) => queryBuilder.uuid(p.id)))
-                ),
-                set: {
-                    payment,
-                },
-            }))
-            .run(db);
+        await createPayment({
+            payloads,
+            dataSupplierId: userId,
+            paymentDetails: {
+                stripeSessionId: session.id,
+                stripeCheckoutUrl: session.url!,
+            },
+        }).run(db);
 
         return session.url;
     } else {
@@ -93,19 +69,7 @@ export async function createPaymentForUnattachedPayloads(
 }
 
 export async function getOngoingSessionCheckoutLink(userId: DataSupplier['id']) {
-    const ongoingPayment = (
-        await queryBuilder
-            .select(queryBuilder.Payment, (payment) => ({
-                filter: queryBuilder.op(
-                    queryBuilder.op(payment.dataSupplier.id, '=', queryBuilder.uuid(userId)),
-                    'and',
-                    queryBuilder.op(payment.paymentState, '=', queryBuilder.PaymentState.PENDING)
-                ),
-
-                stripeCheckoutURL: true,
-            }))
-            .run(db)
-    )[0];
+    const ongoingPayment = (await getOngoingPaymentByDataSupplier(userId).run(db))[0];
     if (ongoingPayment) {
         console.log(ongoingPayment);
         return ongoingPayment.stripeCheckoutURL;

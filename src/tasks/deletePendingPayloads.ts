@@ -4,34 +4,15 @@ import { unlink } from 'fs';
 import { resolve } from 'path';
 import { CHUNK_INPUT_SAVE_PATH, CHUNK_OUTPUT_SAVE_PATH } from '@/utils/constants';
 import { doNothing } from '@/utils/helper';
-import queryBuilder from 'dbschema/edgeql-js/index';
-import { subHours } from 'date-fns';
+import { deletePayments, getPendingPayments } from '@/database/Payment/PaymentRepository';
+import { deleteChunks } from '@/database/Chunk/ChunkRepository';
 const { db, stripe } = app;
 
 if (process.argv[3] === 'MAIN_SERVER') {
     // Every hour, on the dot.
     cron.schedule('0 * * * *', async () => {
         try {
-            const pendingPayments = await queryBuilder
-                .select(queryBuilder.Payment, (payment) => ({
-                    filter: queryBuilder.op(
-                        queryBuilder.op(
-                            payment.paymentState,
-                            '=',
-                            queryBuilder.PaymentState.PENDING
-                        ),
-                        'and',
-                        queryBuilder.op(payment.createdAt, '<', subHours(new Date(), 1))
-                    ),
-                    id: true,
-                    stripeSessionID: true,
-                    payloads: {
-                        chunks: {
-                            id: true,
-                        },
-                    },
-                }))
-                .run(db);
+            const pendingPayments = await getPendingPayments().run(db);
             console.log('pending payments', pendingPayments);
             if (pendingPayments.length) {
                 const paymentsToRemoveIds: string[] = [];
@@ -52,28 +33,8 @@ if (process.argv[3] === 'MAIN_SERVER') {
                         console.log(err);
                     }
                 }
-                const removedPayments = await queryBuilder
-                    .delete(queryBuilder.Payment, (payment) => ({
-                        filter: queryBuilder.op(
-                            payment.id,
-                            'in',
-                            queryBuilder.set(
-                                ...paymentsToRemoveIds.map((id) => queryBuilder.uuid(id))
-                            )
-                        ),
-                    }))
-                    .run(db);
-                const removedChunks = await queryBuilder
-                    .delete(queryBuilder.Chunk, (chunk) => ({
-                        filter: queryBuilder.op(
-                            chunk.id,
-                            'in',
-                            queryBuilder.set(
-                                ...chunksToRemoveIds.map((id) => queryBuilder.uuid(id))
-                            )
-                        ),
-                    }))
-                    .run(db);
+                const removedPayments = await deletePayments(paymentsToRemoveIds).run(db);
+                const removedChunks = await deleteChunks(chunksToRemoveIds).run(db);
                 console.log('Removed payments', removedPayments);
                 console.log('Removed chunks', removedChunks);
             }

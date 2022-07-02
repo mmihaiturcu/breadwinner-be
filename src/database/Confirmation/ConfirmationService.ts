@@ -2,17 +2,11 @@ import app from '@/config/App';
 import { isBefore } from 'date-fns';
 import { HTTPGoneError, HTTPConflictError } from '@/errors/index';
 import { NotFoundError } from 'routing-controllers';
-import queryBuilder from 'dbschema/edgeql-js/index';
+import { getConfirmationByUuid } from './ConfirmationRepository';
 const { db } = app;
 
 export async function verifyConfirmation(uuid: string) {
-    const confirmations = await queryBuilder
-        .select(queryBuilder.Confirmation, (confirmation) => ({
-            filter: queryBuilder.op(confirmation.uuid, '=', uuid),
-            wasUsed: true,
-            expiresAt: true,
-        }))
-        .run(db);
+    const confirmations = await getConfirmationByUuid(uuid).run(db);
 
     if (confirmations.length) {
         const confirmation = confirmations[0];

@@ -12,8 +12,14 @@ import { ChunkProcessedEventData, JSONSchema, PayloadToProcessDTO } from '@/type
 import { DecryptPayloadDTOResponse } from '@/types/payloads/responses/DecryptPayloadDTOResponse';
 import { NotFoundError } from 'routing-controllers';
 import { User, DataProcessor, Payload } from '../models/index';
-import queryBuilder from 'dbschema/edgeql-js/index';
 import { readFilePromise, writeFilePromise } from '@/utils/helper';
+import {
+    addPayload,
+    getDataSupplierPayloads,
+    getPayloadChunkIds,
+    getPayloadDecryptInfo,
+} from './PayloadRepository';
+import { getChunkToProcess, saveChunkOutput } from '../Chunk/ChunkRepository';
 const { db } = app;
 
 export async function createPayload(userId: User['id'], payloadDTO: PayloadDTO) {
@@ -21,38 +27,18 @@ export async function createPayload(userId: User['id'], payloadDTO: PayloadDTO) 
         const hasRelinKeys = typeof payloadDTO.relinKeys !== 'undefined';
         const hasGaloisKeys = typeof payloadDTO.galoisKeys !== 'undefined';
 
-        const savedPayload = await queryBuilder
-            .insert(queryBuilder.Payload, {
-                label: payloadDTO.label,
-                jsonSchema: queryBuilder.json(payloadDTO.jsonSchema),
-                hasRelinKeys,
-                hasGaloisKeys,
-                dataSupplier: queryBuilder.select(queryBuilder.DataSupplier, (dataSupplier) => ({
-                    filter: queryBuilder.op(dataSupplier.id, '=', queryBuilder.uuid(userId)),
-                    id: true,
-                })),
-                chunks: queryBuilder.set(
-                    ...payloadDTO.chunks.map((chunkDTO) =>
-                        queryBuilder.insert(queryBuilder.Chunk, {
-                            length: chunkDTO.length,
-                            paidFor: false,
-                            processed: false,
-                        })
-                    )
-                ),
-            })
-            .run(db);
+        const savedPayload = await addPayload({
+            label: payloadDTO.label,
+            jsonSchema: payloadDTO.jsonSchema,
+            hasRelinKeys,
+            hasGaloisKeys,
+            dataSupplierId: userId,
+            chunks: payloadDTO.chunks,
+        }).run(db);
 
         console.log('saved payload');
 
-        const chunkIds = await queryBuilder
-            .select(queryBuilder.Payload, (payload) => ({
-                filter: queryBuilder.op(payload.id, '=', queryBuilder.uuid(savedPayload.id)),
-                chunks: {
-                    id: true,
-                },
-            }))
-            .run(db);
+        const chunkIds = await getPayloadChunkIds(savedPayload.id).run(db);
 
         if (chunkIds) {
             const fileWritePromises: Promise<void>[] = [];
@@ -99,20 +85,7 @@ export async function createPayload(userId: User['id'], payloadDTO: PayloadDTO) 
 }
 
 export async function getPayloadsForUser(userId: User['id']) {
-    const dataSupplier = await queryBuilder
-        .select(queryBuilder.DataSupplier, (dataSupplier) => ({
-            filter: queryBuilder.op(dataSupplier.id, '=', queryBuilder.uuid(userId)),
-            payloads: {
-                id: true,
-                label: true,
-                chunks: {
-                    id: true,
-                    length: true,
-                    processed: true,
-                },
-            },
-        }))
-        .run(db);
+    const dataSupplier = await getDataSupplierPayloads(userId).run(db);
 
     if (dataSupplier) {
         const payloads = dataSupplier.payloads;
@@ -135,28 +108,7 @@ export async function getPayloadsForUser(userId: User['id']) {
 }
 
 export async function getProcessingPayload(): Promise<PayloadToProcessDTO | void> {
-    const chunks = await queryBuilder
-        .select(queryBuilder.Chunk, (chunk) => ({
-            filter: queryBuilder.op(
-                queryBuilder.op(chunk.processed, '=', false),
-                'and',
-                queryBuilder.op(
-                    chunk.payload.payment.paymentState,
-                    '=',
-                    queryBuilder.PaymentState.PAID
-                )
-            ),
-            limit: 1,
-            id: true,
-            length: true,
-            payload: {
-                id: true,
-                jsonSchema: true,
-                hasGaloisKeys: true,
-                hasRelinKeys: true,
-            },
-        }))
-        .run(db);
+    const chunks = await getChunkToProcess().run(db);
     if (chunks.length) {
         const chunk = chunks[0];
         const payload = chunk.payload;
@@ -209,25 +161,7 @@ export async function saveChunkProcessingResult(
     data: ChunkProcessedEventData
 ) {
     // Update the chunk that was just processed
-    const chunk = await queryBuilder
-        .update(queryBuilder.Chunk, (chunk) => ({
-            filter: queryBuilder.op(
-                queryBuilder.op(chunk.id, '=', queryBuilder.uuid(data.chunkId)),
-                'and',
-                queryBuilder.op(chunk.processed, '=', false)
-            ),
-            set: {
-                dataProcessor: queryBuilder.select(queryBuilder.DataProcessor, (dataProcessor) => ({
-                    filter: queryBuilder.op(
-                        dataProcessor.id,
-                        '=',
-                        queryBuilder.uuid(dataProcessorId)
-                    ),
-                })),
-                processed: true,
-            },
-        }))
-        .run(db);
+    const chunk = await saveChunkOutput({ chunkId: data.chunkId, dataProcessorId }).run(db);
 
     if (chunk) {
         console.log('saved chunk', chunk);
@@ -239,16 +173,7 @@ export async function saveChunkProcessingResult(
 export async function getDecryptInfoForPayload(
     id: Payload['id']
 ): Promise<DecryptPayloadDTOResponse> {
-    const payload = await queryBuilder
-        .select(queryBuilder.Payload, (payload) => ({
-            filter: queryBuilder.op(payload.id, '=', queryBuilder.uuid(id)),
-            jsonSchema: true,
-            chunks: {
-                id: true,
-                length: true,
-            },
-        }))
-        .run(db);
+    const payload = await getPayloadDecryptInfo(id).run(db);
 
     if (payload) {
         const parsedJSONSchema = JSON.parse(payload.jsonSchema) as JSONSchema;
