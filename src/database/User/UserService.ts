@@ -83,7 +83,7 @@ export async function sendAccountConfirmationEmail(email: string, role: Role, uu
                 [
                     {
                         text: 'Set password',
-                        url: `${process.env.FRONTEND_URL}/#/confirmation?uuid=${uuid}`,
+                        url: `https://${process.env.FRONTEND_URL}/#/confirmation?uuid=${uuid}`,
                     },
                 ]
             )
@@ -233,8 +233,8 @@ export async function getConnectedStripeAccountLink(userId: User['id']) {
         try {
             const accountLink = await app.stripe.accountLinks.create({
                 account: connectedStripeAccountID,
-                refresh_url: process.env.FRONTEND_URL,
-                return_url: process.env.FRONTEND_URL,
+                refresh_url: `https://${process.env.FRONTEND_URL}`,
+                return_url: `https://${process.env.FRONTEND_URL}`,
                 // type: dataProcessor.activatedStripeAccount ? 'account_update' : 'account_onboarding',
                 type: 'account_onboarding',
             });

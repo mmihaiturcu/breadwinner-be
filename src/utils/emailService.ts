@@ -31,7 +31,7 @@ export function getGeneralEmailTemplate(title: string, content: string) {
                             </tr>
                             <tr>
                                 <td style="text-align: center">
-                                    <a href="${process.env.FRONTEND_URL}" title="Breadwinner logo" target="_blank">
+                                    <a href="https://${process.env.FRONTEND_URL}" title="Breadwinner logo" target="_blank">
                                         <img src="cid:logo@breadwinner" title="Breadwinner logo" alt="Breadwinner logo" style="width: 100%; max-width: 450px;">;
                                     </a> 
                                 </td>

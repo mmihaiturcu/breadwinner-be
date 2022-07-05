@@ -28,7 +28,7 @@ class App {
         });
         this.app.expressApp.use(
             cors({
-                origin: process.env.FRONTEND_URL,
+                origin: `https://${process.env.FRONTEND_URL}`,
                 credentials: true,
             })
         );

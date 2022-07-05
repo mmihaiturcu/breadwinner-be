@@ -35,8 +35,8 @@ export async function createPaymentForUnattachedPayloads(
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             mode: 'payment',
-            success_url: process.env.FRONTEND_URL,
-            cancel_url: process.env.FRONTEND_URL,
+            success_url: `https://${process.env.FRONTEND_URL}`,
+            cancel_url: `https://${process.env.FRONTEND_URL}`,
             customer_email: email,
             line_items: [
                 {
